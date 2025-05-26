@@ -29,5 +29,8 @@ func GetDataValue(cycle CycleType, typeKey TypeKey, userID UserID) (map[string]i
 		getService(cycle, DefaultExpireFor(cycle , typeKey)).
 		getCollection(typeKey).
 		get(cycle, typeKey, userID)
+	if pb == nil || pb.MiscData == nil {
+		return make(map[string]interface{}) // return empty map if nil
+	}
 	return UtilCopyMap(pb.MiscData)
 }
