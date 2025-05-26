@@ -16,8 +16,7 @@
     cycle := cycledata.DailyCycle
     typeKey := cycledata.TypeKey(1)
     cycledata.RegisterLoader(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, userID cycledata.UserID) *cycledata.PlayerData {
-        // 模拟加载数据
-
+        // 模拟加载数据 （记得加载的时候判断对应过期时间和当前时间）
         return &cycledata.PlayerData{
             UserID:     userID,
             UpdateTime:  int32(timestate.GetSecond()),
