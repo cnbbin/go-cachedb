@@ -53,7 +53,9 @@
     // 获取数据（自动加载或创建）
     data := cycledata.GetData(cycle, typeKey, userID)
      if data == nil {
-            fmt.Println("Appended achievement" , cycle, typeKey, userID , nil )
+       fmt.Println("Appended achievement" , cycle, typeKey, userID , nil )
+     }else{
+       fmt.Println("Appended achievement" , cycle, typeKey, userID , data.MiscData )
      }
     // 更新数据字段
     cycledata.SetData(cycle, typeKey, userID , make(map[string]interface{}))
