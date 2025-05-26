@@ -59,29 +59,31 @@ cycledata.RegisterStorer(func(cycle cycledata.CycleType, typeKey cycledata.TypeK
 ### 读取与更新数据
 
 ```go
-userID := cycledata.UserID(1001)
-cycle := cycledata.DailyCycle
-typeKey := cycledata.TypeKey(1)
+    userID := cycledata.UserID(1001)
+    cycle := cycledata.DailyCycle
+    typeKey := cycledata.TypeKey(1)
 
-// 获取数据（自动加载或创建）
-data := cycledata.GetData(cycle, typeKey, userID)
+    // 获取数据（自动加载或创建）
+    data := cycledata.GetData(cycle, typeKey, userID)
+     if data == nil {
+            fmt.Println("Appended achievement" , cycle, typeKey, userID , nil )
+     }
+    // 更新数据字段
+    cycledata.SetData(cycle, typeKey, userID , make(map[string]interface{}))
 
-// 更新数据字段
-data.update("score", 500)
+    // 条件追加 int32 切片示例
+    ok := cycledata.AppendToInt32SliceIf(cycle, typeKey, userID, "achievements", 10, func(s []int32) bool {
+    	return len(s) < 10
+    })
+    if ok {
+    	fmt.Println("Appended achievement" , cycledata.GetDataValue(cycle, typeKey, userID))
+    }
 
-// 条件追加 int32 切片示例
-ok := cycledata.AppendToInt32SliceIf(cycle, typeKey, userID, "achievements", 10, func(s []int32) bool {
-	return len(s) < 10
-})
-if ok {
-	fmt.Println("Appended achievement")
-}
+    // 刷新数据到存储器
+    cycledata.Flush(cycle, typeKey)
 
-// 刷新数据到存储器
-cycledata.Flush(cycle, typeKey)
-
-// 其他服务停止的时候调用一下
-cycledata.FlushAll()
+	// 其他服务停止的时候调用一下
+	cycledata.FlushAll()
 ```
 
 ---
