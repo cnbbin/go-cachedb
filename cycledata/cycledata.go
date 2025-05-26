@@ -54,12 +54,16 @@ var (
 
 	/* 数据存储函数 */
 	stores = make(map[CycleType]map[TypeKey]func(cycle CycleType, typeKey TypeKey, data *PlayerData) error)
+
+	/* 自定义过期处理函数 */
+	cleanExpireds = make(map[CycleType]map[TypeKey]func(cycle CycleType, typeKey TypeKey, data *PlayerData))
 )
 
 func init() {
 	loaders = make(map[CycleType]map[TypeKey]func(CycleType, TypeKey, UserID) *PlayerData)
 	creators = make(map[CycleType]map[TypeKey]func(UserID) *PlayerData)
 	stores = make(map[CycleType]map[TypeKey]func(CycleType, TypeKey, *PlayerData) error)
+	cleanExpireds = make(map[CycleType]map[TypeKey]func(cycle CycleType, typeKey TypeKey, data *PlayerData))
 }
 
 
@@ -171,19 +175,39 @@ func (dc *dataCollection) set(cycle CycleType, typeKey TypeKey, userID UserID, m
 /*
  * 清理过期数据
  */
-func (dc *dataCollection) cleanExpired(now int32, cycle CycleType, typeKey TypeKey) {
-	// 根据 cycle 和 typeKey 做清理逻辑
-	dc.mu.Lock()
+ func (dc *dataCollection) cleanExpired(now int32, cycle CycleType, typeKey TypeKey) {
+    dc.mu.Lock()
     defer dc.mu.Unlock()
 
+    // First check if there's a custom expiration handler for this cycle and type
+    handler := getCleanExpired(cycle, typeKey)
+    
+    // If no handler exists and no data to process, return early
+    if handler == nil || len(dc.data) == 0 {
+        return
+    }
+	isDelete := true
     for uid, data := range dc.data {
-        if data.ExpireTime == 0 {
+		// Default expiration logic
+		if data.ExpireTime == 0 {
+			if isDelete{
+				isDelete = false				
+			}
+			continue
+		}
+        if handler != nil {
+            // Use custom expiration handler
+            handler(cycle, typeKey, data)
+			delete(dc.data, uid)
             continue
         }
-    	if data.ExpireTime <=  now {
-    		delete(dc.data, uid)
-    	}
+        if data.ExpireTime <= now {
+            delete(dc.data, uid)
+        }
     }
+	if isDelete {
+		dc.data = make(map[UserID]*PlayerData)
+	}
 }
 
 /*
@@ -485,3 +509,13 @@ func getStore(cycle CycleType, typeKey TypeKey) func(CycleType, TypeKey, *Player
     return nil
 }
 
+
+/*
+ * 获取指定过期处理函数
+ */
+ func getCleanExpired(cycle CycleType, typeKey TypeKey) func(cycle CycleType, typeKey TypeKey, data *PlayerData) {
+    if m, ok := cleanExpireds[cycle]; ok {
+        return m[typeKey]
+    }
+    return nil
+}

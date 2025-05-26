@@ -41,3 +41,13 @@ func RegisterCreator(cycle CycleType, typeKey TypeKey, creator func(userID UserI
     // Register the store function for this specific cycle and type
     stores[cycle][typeKey] = store
 }
+
+/*
+ * 注册自定义过期处理函数
+ */
+ func RegisterCleanExpired(cycle CycleType, typeKey TypeKey, handler func(cycle CycleType, typeKey TypeKey, data *PlayerData)) {
+    if _, ok := cleanExpireds[cycle]; !ok {
+        cleanExpireds[cycle] = make(map[TypeKey]func(cycle CycleType, typeKey TypeKey, data *PlayerData))
+    }
+    cleanExpireds[cycle][typeKey] = handler
+}
