@@ -90,8 +90,8 @@ func toInt32Slice(v interface{}) ([]int32, bool) {
 	}
 }
 
-func CopyMap[K comparable, V any](src map[K]V) map[K]V {
-    dst := make(map[K]V, len(src))
+func UtilCopyMap(src map[string]interface{}) map[string]interface{} {
+    dst := make(map[string]interface{} , len(src))
     for k, v := range src {
         dst[k] = v
     }

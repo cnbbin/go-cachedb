@@ -30,5 +30,5 @@ func GetDataValue(cycle CycleType, typeKey TypeKey, userID UserID) (map[string]i
 		getService(cycle, DefaultExpireFor(cycle , typeKey)).
 		getCollection(typeKey).
 		get(cycle, typeKey, userID)
-	return CopyMap(result)
+	return UtilCopyMap(result)
 }
