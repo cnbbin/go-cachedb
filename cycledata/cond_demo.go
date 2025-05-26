@@ -27,7 +27,7 @@ func GameInfo(){
     // 注册加载器
     now := time.Now()
     timestamp := int32(now.Unix())
-    RegisterLoader(DailyCycle, 1, func(cycle CycleType, typeKey TypeKey, userID UserID) *PlayerData {
+    RegisterLoader(DailyCycle, TypeKey(1), func(cycle CycleType, typeKey TypeKey, userID UserID) *PlayerData {
         // 模拟加载数据
         return &PlayerData{
             UserID:     userID,
@@ -36,7 +36,7 @@ func GameInfo(){
             MiscData:   make(map[string]interface{}),
         }
     })
-    RegisterLoader(DailyCycle, 1, func(cycle CycleType, typeKey TypeKey, userID UserID) *PlayerData {
+    RegisterCreator(DailyCycle, TypeKey(1), func(UserID)(*PlayerData){
         // 从数据库或缓存加载数据，示例返回空数据
         return &PlayerData{
             UserID:     userID,
@@ -46,25 +46,38 @@ func GameInfo(){
         }
     })
 
-    RegisterStorer(DailyCycle, 1, func(cycle CycleType, typeKey TypeKey, data *PlayerData) error {
+    RegisterStorer(DailyCycle, TypeKey(1), func(cycle CycleType, typeKey TypeKey, data *PlayerData) error {
         // Store data to database or cache
-        fmt.Printf("Storing %s data for user %d (Type: %d)\nDetails: %+v\n", 
-            cycle, 
-            data.UserID, 
+        fmt.Printf("Storing %s data for user %d (Type: %d)\nDetails: %+v\n",
+            cycle,
+            data.UserID,
             typeKey,
             data.MiscData)
-        
-        // Actual storage implementation would go here
-        // For example:
-        // err := db.SavePlayerData(cycle, typeKey, data)
-        // if err != nil {
-        //     return fmt.Errorf("failed to save player data: %w", err)
-        // }
-        
+
         return nil
     })
+    userID := cycledata.UserID(1001)
+    cycle := cycledata.DailyCycle
+    typeKey := cycledata.TypeKey(1)
+    // 获取数据（自动加载或创建）
+    data := GetData(cycle, typeKey, userID)
+     if data == nil {
+            fmt.Println("Appended achievement" , cycle, typeKey, userID , nil )
+     }
+    // 更新数据字段
+    SetData(cycle, typeKey, userID , make(map[string]interface{}))
 
-    // 获取数据
-    pd := GetData(DailyCycle, 1, 12345)
-    pd.update("score", 100)
+    // 条件追加 int32 切片示例
+    ok := AppendToInt32SliceIf(cycle, typeKey, userID, "achievements", 10, func(s []int32) bool {
+    	return len(s) < 10
+    })
+    if ok {
+    	fmt.Println("Appended achievement" , cycledata.GetDataValue(cycle, typeKey, userID))
+    }
+
+    // 刷新数据到存储器
+    cycledata.Flush(cycle, typeKey)
+
+    // 其他服务停止的时候调用一下
+    cycledata.FlushAll()
 }
