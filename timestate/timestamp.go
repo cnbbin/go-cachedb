@@ -11,8 +11,7 @@ var (
 	currentSecTimestamp int64
 )
 
-func InitMsSecTimer() {
-	tz := time.Local // Use local timezone by default
+func InitMsSecTimer(tz *time.Location) {
 	now := time.Now().In(tz)
 	atomic.StoreInt64(&currentMsTimestamp, now.UnixMilli())
 	atomic.StoreInt64(&currentSecTimestamp, now.Unix())
