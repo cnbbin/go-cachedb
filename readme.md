@@ -48,6 +48,9 @@
 	cycledata.RegisterDefaultExpireFunc(cycledata.DailyCycle, cycledata.TypeKey(1), func() int32 {
 		return int32(timestate.GetNextDayTimestamp())
 	})
+    timestate.RegisterDayCallback(func(t time.Time) {
+        cycledata.Flush(cycledata.DailyCycle, cycledata.TypeKey(1))
+    })
     // 获取数据（自动加载或创建）
     data := cycledata.GetData(cycle, typeKey, userID)
      if data == nil {
