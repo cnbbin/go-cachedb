@@ -77,6 +77,11 @@ func GetSecond() int64 {
 	return currentSecond.Load()
 }
 
+// GetSecondTime 获取当前秒级时间戳的time.Time对象
+func GetSecondTime() time.Time {
+	return time.Unix(currentSecond.Load(), 0)
+}
+
 // GetMillisecond 获取对齐100ms边界的毫秒级时间戳
 func GetMillisecond() int64 {
 	return currentMillisecond.Load()
