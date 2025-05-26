@@ -44,9 +44,19 @@
 
         return nil
     })
+    cycledata.RegisterCleanExpiredr(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, data *cycledata.PlayerData) {
+        // Store data to database or cache
+        fmt.Printf("CleanExpiredr %s data for user %d (Type: %d)\nDetails: %+v\n",
+            cycle,
+            data.UserID,
+            typeKey,
+            data.MiscData)
+    })
+
 	cycledata.RegisterDefaultExpireFunc(cycledata.DailyCycle, cycledata.TypeKey(1), func() int32 {
 		return int32(timestate.GetNextDayTimestamp())
 	})
+
     timestate.RegisterDayCallback(func(t time.Time) {
         cycledata.CleanExpiredDataByType(cycledata.DailyCycle, cycledata.TypeKey(1))
     })
