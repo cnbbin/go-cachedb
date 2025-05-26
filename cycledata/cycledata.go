@@ -327,6 +327,46 @@ func (h *cycleHandler) startCleanupRoutine() {
 }
 
 /*
+ * cleanExpiredDataByType 根据传入的周期 CycleType 和类型 TypeKey，清理对应数据集合中的过期数据
+ *
+ * 1. 获取对应周期的 service
+ * 2. 获取对应类型的数据集合
+ * 3. 获取当前时间戳
+ * 4. 调用数据集合的 cleanExpired 方法
+ */
+ func (h *cycleHandler) cleanExpiredDataByType(cycle CycleType, typeKey TypeKey) {
+    // 获取对应周期的 service
+    h.mu.RLock()
+    service, ok := h.services[cycle]
+    h.mu.RUnlock()
+
+    if !ok || service == nil {
+        return
+    }
+
+    // 获取对应类型的数据集合
+    service.mu.RLock()
+    col, ok := service.collections[typeKey]
+    service.mu.RUnlock()
+
+    if !ok || col == nil {
+        return
+    }
+
+    // 获取当前时间戳并清理过期数据
+    now := time.Now()
+    timestamp := int32(now.Unix())
+    col.cleanExpired(timestamp, cycle, typeKey)
+}
+
+/*
+ * CleanExpiredDataByType 公开方法，清理指定周期和类型的过期数据
+ */
+func CleanExpiredDataByType(cycle CycleType, typeKey TypeKey) {
+    globalHandler.cleanExpiredDataByType(cycle, typeKey)
+}
+
+/*
  * cleanExpiredData 根据传入的周期 CycleType，清理对应周期服务中的过期数据
  *
  * 1. 先对 cycleHandler 的服务 map 加读锁，获取对应周期的 service 指针
