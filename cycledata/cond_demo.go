@@ -56,9 +56,9 @@ func GameInfo(){
 
         return nil
     })
-    userID := cycledata.UserID(1001)
-    cycle := cycledata.DailyCycle
-    typeKey := cycledata.TypeKey(1)
+    userID := UserID(1001)
+    cycle := DailyCycle
+    typeKey := TypeKey(1)
     // 获取数据（自动加载或创建）
     data := GetData(cycle, typeKey, userID)
      if data == nil {
@@ -72,12 +72,12 @@ func GameInfo(){
     	return len(s) < 10
     })
     if ok {
-    	fmt.Println("Appended achievement" , cycledata.GetDataValue(cycle, typeKey, userID))
+    	fmt.Println("Appended achievement" , GetDataValue(cycle, typeKey, userID))
     }
 
     // 刷新数据到存储器
-    cycledata.Flush(cycle, typeKey)
+    Flush(cycle, typeKey)
 
     // 其他服务停止的时候调用一下
-    cycledata.FlushAll()
+    FlushAll()
 }
