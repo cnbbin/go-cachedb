@@ -1,3 +1,21 @@
+# 项目描述
+
+```System Architecture Requirements
+    系统架构需求
+statistic (统计)  
+-Statistic Layer (原子统计层)
+--职责：高性能原子计数器，无状态轻量级操作
+cache   (频繁数据) 作用: 定时落地，用于存储数据上报  
+-Cache Layer (热数据缓存层)
+--职责：临时聚合统计结果，定时刷盘
+cycledata  (周期性/永久数据缓存)  
+-CycleData Layer (周期数据层)
+--职责：生命周期管理+注册模式核心
+timestate  
+-TimeState Layer (时间中枢)
+--职责：统一时间管理和周期事件触发
+```
+
 ## 使用示例
 
 ### 注册加载器、创建器和存储器
