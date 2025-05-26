@@ -168,8 +168,12 @@ func TestReadFunctions(test *testing.T) {
 
 
 func TestMsSecTimer(test *testing.T) {
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		test.Fatalf("加载时区失败: %v", err)
+	}
 	// 初始化定时器
-	InitMsSecTimer()
+	InitMsSecTimer(loc)
 
 	// 等待定时器启动稳定
 	time.Sleep(150 * time.Millisecond)

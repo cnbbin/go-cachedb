@@ -5,7 +5,7 @@
 package cycledata
 
 import (
-    "maps"
+    "golang.org/x/exp/maps"
 )
 
 
@@ -30,6 +30,9 @@ func GetDataValue(cycle CycleType, typeKey TypeKey, userID UserID) (map[string]i
 		getService(cycle, DefaultExpireFor(cycle , typeKey)).
 		getCollection(typeKey).
 		get(cycle, typeKey, userID)
-	result := maps.Clone(pb.MiscData)
-	return result
+	if pb == nil || pb.MiscData == nil {
+		return make(map[string]interface{}) // return empty map if nil
+	}
+    return maps.Clone(pb.MiscData)
+
 }
