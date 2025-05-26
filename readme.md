@@ -9,21 +9,19 @@
     timestate.InitTimer(loc)
     nowtime := timestate.GetTimestamp()
     fmt.Println("nowtime" , nowtime)
-    fmt.Println("nowtime" , timestate.GetNextDayTimestamp())
-    fmt.Println("nowtime" , timestate.GetNextWeekTimestamp())
-    fmt.Println("nowtime" , timestate.GetNextMonthTimestamp())
+    fmt.Println("nextdaytimestamp" , timestate.GetNextDayTimestamp())
+    fmt.Println("nextweektimestamp" , timestate.GetNextWeekTimestamp())
+    fmt.Println("nextmonthtimestamp" , timestate.GetNextMonthTimestamp())
     userID := cycledata.UserID(1001)
     cycle := cycledata.DailyCycle
     typeKey := cycledata.TypeKey(1)
-
-    now := time.Now()
-    timestamp := int32(now.Unix())
     cycledata.RegisterLoader(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, userID cycledata.UserID) *cycledata.PlayerData {
         // 模拟加载数据
+
         return &cycledata.PlayerData{
             UserID:     userID,
-            UpdateTime: time.Now(),
-            ExpireTime: timestamp + 24* 3600,
+            UpdateTime:  int32(timestate.GetSecond()),
+            ExpireTime: int32(timestate.GetNextDayTimestamp()),
             MiscData:   make(map[string]interface{}),
         }
     })
@@ -32,8 +30,8 @@
         return &cycledata.PlayerData{
             UserID:     userID,
             MiscData:   make(map[string]interface{}),
-            UpdateTime: time.Now(),
-            ExpireTime: timestamp + 24* 3600,
+            UpdateTime: int32(timestate.GetSecond()),
+            ExpireTime: int32(timestate.GetNextDayTimestamp()),
         }
     })
 
