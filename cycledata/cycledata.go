@@ -53,12 +53,13 @@ var (
 	creators = make(map[CycleType]map[TypeKey]func(userID UserID) *PlayerData)
 
 	/* 数据存储函数 */
-	storeData func(cycle CycleType, typeKey TypeKey, data *PlayerData) error
+	stores = make(map[CycleType]map[TypeKey]func(cycle CycleType, typeKey TypeKey, data *PlayerData) error)
 )
 
 func init() {
 	loaders = make(map[CycleType]map[TypeKey]func(CycleType, TypeKey, UserID) *PlayerData)
 	creators = make(map[CycleType]map[TypeKey]func(UserID) *PlayerData)
+	stores = make(map[CycleType]map[TypeKey]func(CycleType, TypeKey, *PlayerData) error)
 }
 
 
@@ -189,7 +190,7 @@ func (dc *dataCollection) cleanExpired(now int32, cycle CycleType, typeKey TypeK
  * 将集合中所有数据刷入存储器
  */
 func (dc *dataCollection) flushAll(cycle CycleType, typeKey TypeKey) {
-	if storeData == nil {
+	if stores  == nil {
 		return
 	}
 
@@ -197,11 +198,11 @@ func (dc *dataCollection) flushAll(cycle CycleType, typeKey TypeKey) {
 	defer dc.mu.RUnlock()
 
 	for _, data := range dc.data {
-		if err := storeData(cycle, typeKey, data); err != nil {
-			log.Printf("[Flush] Failed to store data for user %d: %v", data.UserID, err)
-		}else{
-		    // todo test
-		    log.Printf("[Flush] Success to store data for user %d typeKey %d", data.UserID , typeKey)
+	// 创建器
+		if store := getStore(cycle, typeKey); store != nil {
+			if err := store(cycle, typeKey, data); err != nil {
+				log.Printf("Failed to store data for cycle %v, type %v: %v", cycle, typeKey, err)
+			}
 		}
 	}
 }
@@ -430,4 +431,17 @@ func getCreator(cycle CycleType, typeKey TypeKey) func(UserID) *PlayerData {
 	return nil
 }
 
+
+/*
+ * 获取指定存储器
+ */
+// getStore retrieves the appropriate store function for the given cycle and type
+func getStore(cycle CycleType, typeKey TypeKey) func(CycleType, TypeKey, *PlayerData) error {
+    if typeStores, ok := stores[cycle]; ok {
+        if store, ok := typeStores[typeKey]; ok {
+            return store
+        }
+    }
+    return nil
+}
 

@@ -46,19 +46,21 @@ func GameInfo(){
         }
     })
 
-    RegisterCreator(DailyCycle, 1, func(userID UserID) *PlayerData {
-        // 创建新玩家数据
-        return &PlayerData{
-            UserID:     userID,
-            MiscData:   make(map[string]interface{}),
-            UpdateTime: time.Now(),
-            ExpireTime:  timestamp + 24* 3600,
-        }
-    })
-
-    RegisterStorer(func(cycle CycleType, typeKey TypeKey, data *PlayerData) error {
-        // 存储数据到数据库或缓存
-        fmt.Printf("Storing data for user %d, cycle %s, miscData %v , type %d\n", data.UserID, cycle, data.MiscData, typeKey)
+    RegisterStorer(DailyCycle, 1, func(cycle CycleType, typeKey TypeKey, data *PlayerData) error {
+        // Store data to database or cache
+        fmt.Printf("Storing %s data for user %d (Type: %d)\nDetails: %+v\n", 
+            cycle, 
+            data.UserID, 
+            typeKey,
+            data.MiscData)
+        
+        // Actual storage implementation would go here
+        // For example:
+        // err := db.SavePlayerData(cycle, typeKey, data)
+        // if err != nil {
+        //     return fmt.Errorf("failed to save player data: %w", err)
+        // }
+        
         return nil
     })
 

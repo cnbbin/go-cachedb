@@ -23,9 +23,21 @@ func RegisterCreator(cycle CycleType, typeKey TypeKey, creator func(userID UserI
 }
 
 /*
- * RegisterStorer
- * 注册数据存储器
+ * RegisterStorer registers a storage function for a specific cycle type and data type
+ * 
+ * Parameters:
+ *   cycle - The cycle type (e.g., daily, weekly, monthly)
+ *   typeKey - The data type identifier
+ *   store - The storage function that handles persisting player data
  */
-func RegisterStorer(storer func(cycle CycleType, typeKey TypeKey, data *PlayerData) error) {
-	storeData = storer
+ func RegisterStorer(cycle CycleType, typeKey TypeKey, 
+    store func(cycle CycleType, typeKey TypeKey, data *PlayerData) error) {
+    
+    // Initialize the inner map if this cycle type hasn't been registered before
+    if _, ok := stores[cycle]; !ok {
+        stores[cycle] = make(map[TypeKey]func(CycleType, TypeKey, *PlayerData) error)
+    }
+    
+    // Register the store function for this specific cycle and type
+    stores[cycle][typeKey] = store
 }
