@@ -9,58 +9,69 @@ import (
 	"fmt"
 )
 
+// callbackManager manages a collection of time-based callbacks with thread-safe access
 type callbackManager struct {
 	mu        sync.RWMutex
 	callbacks []func(time.Time)
 }
 
-// 修改为支持 context 的回调签名
+// TimedCallbackFunc defines the signature for time-based callbacks with context support
 type TimedCallbackFunc func(ctx context.Context, t time.Time)
 
+// timedCallback represents a scheduled daily callback at specific hour and minute
 type timedCallback struct {
 	Hour, Minute int
 	Callback     TimedCallbackFunc
 }
 
+// timeKey is used as a map key for storing timed callbacks
 type timeKey struct {
 	Hour, Minute int
 }
+
 var (
+	// Atomic storage for current and next week period keys
 	currentWeekKey atomic.Value
 	nextWeekKey    atomic.Value
 )
 
+// Atomic storage for the callback map
 var callbackMap atomic.Value
 
 var (
-	zeroMsTimestamp    int64        // 当天零点的毫秒时间戳
-	zeroSecTimestamp   int64        // 当天零点的秒时间戳
-	zeroDateValue      atomic.Value // 当天日期字符串
+	// Timestamps for the current day's midnight (millisecond and second precision)
+	zeroMsTimestamp    int64
+	zeroSecTimestamp   int64
+	zeroDateValue      atomic.Value // Current date as string in "YYYY-MM-DD" format
 
+	// Timestamps for next day/week/month boundaries
 	nextDayTimestamp   int64
 	nextWeekTimestamp  int64
 	nextMonthTimestamp int64
 
+	// Callback managers for different time periods
 	dayCallbacks   = &callbackManager{}
 	weekCallbacks  = &callbackManager{}
 	monthCallbacks = &callbackManager{}
 
+	// Ensures initialization happens only once
 	once sync.Once
 )
 
 var (
+    // Synchronization for daily timed callbacks
     dailyTimedMu        sync.RWMutex
     dailyTimedCallbacks []timedCallback
-    dailyTimedRegisterChan = make(chan struct{}, 1)
+    dailyTimedRegisterChan = make(chan struct{}, 1) // Notification channel for callback registration
 )
 
-
+// InitTimezoneTimer initializes the time state tracking system with the specified timezone
 func InitTimezoneTimer(tz *time.Location) {
 	once.Do(func() {
-// 		tz := time.Local // Use local timezone by default
 		now := time.Now().In(tz)
 		midnight := getTodayMidnight(now)
 
+		// Initialize atomic time states
 		atomic.StoreInt64(&zeroMsTimestamp, midnight.UnixMilli())
 		atomic.StoreInt64(&zeroSecTimestamp, midnight.Unix())
 		zeroDateValue.Store(midnight.Format("2006-01-02"))
@@ -71,59 +82,67 @@ func InitTimezoneTimer(tz *time.Location) {
 	})
 }
 
-// startMidnightTimer 每天零点触发一次
+// startMidnightTimer runs a loop that triggers at each midnight to update time states
 func startMidnightTimer(tz *time.Location) {
 	for {
 		now := time.Now().In(tz)
 
+		// Calculate next midnight and sleep until then
 		next := getTodayMidnight(now).Add(24 * time.Hour)
 		duration := next.Sub(now)
 
-		log.Printf("[timestate] 下次 0 点触发时间: %v (%.1f小时后)", next.Format("2006-01-02 15:04:05"), duration.Hours())
+		log.Printf("[timestate] Next midnight trigger: %v (in %.1f hours)", next.Format("2006-01-02 15:04:05"), duration.Hours())
 		timer := time.NewTimer(duration)
 		<-timer.C
 		now = time.Now().In(tz)
 		nowTs := now.Unix()
 
+		// Load current time states
 		prevDay := atomic.LoadInt64(&zeroSecTimestamp)
 		nextDay := atomic.LoadInt64(&nextDayTimestamp)
 		nextWeek := atomic.LoadInt64(&nextWeekTimestamp)
 		nextMonth := atomic.LoadInt64(&nextMonthTimestamp)
 
+		// Update all time states
 		updateTimeStates(now)
 
+		// Check and trigger appropriate callbacks
 		go checkAndTriggerCallbacks(now, nowTs, prevDay, nextDay, nextWeek, nextMonth)
 	}
 }
 
+// checkAndTriggerCallbacks determines which periodic callbacks need to be triggered
 func checkAndTriggerCallbacks(now time.Time, nowTs, prevDay, nextDay, nextWeek, nextMonth int64) {
-	log.Printf("[timestate] 当前时间戳: %d", nowTs)
-	log.Printf("[timestate] 零点时间戳: %d", prevDay)
-	log.Printf("[timestate] 下一天时间戳: %d", nextDay)
-	log.Printf("[timestate] 下一周时间戳: %d", nextWeek)
-	log.Printf("[timestate] 下个月时间戳: %d", nextMonth)
+	log.Printf("[timestate] Current timestamp: %d", nowTs)
+	log.Printf("[timestate] Midnight timestamp: %d", prevDay)
+	log.Printf("[timestate] Next day timestamp: %d", nextDay)
+	log.Printf("[timestate] Next week timestamp: %d", nextWeek)
+	log.Printf("[timestate] Next month timestamp: %d", nextMonth)
 
 	if nowTs >= nextDay {
-		log.Printf("[timestate] 触发新的一天回调 @ %v", now.Format("2006-01-02"))
+		log.Printf("[timestate] Triggering new day callbacks @ %v", now.Format("2006-01-02"))
 		dayCallbacks.triggerCallbacks(now)
 	}
 
 	if nowTs >= nextWeek {
-		log.Printf("[timestate] 触发新的一周回调 @ %v", now.Format("2006-01-02"))
+		log.Printf("[timestate] Triggering new week callbacks @ %v", now.Format("2006-01-02"))
 		weekCallbacks.triggerCallbacks(now)
 	}
 
 	if nowTs >= nextMonth {
-		log.Printf("[timestate] 触发新的一月回调 @ %v", now.Format("2006-01"))
+		log.Printf("[timestate] Triggering new month callbacks @ %v", now.Format("2006-01"))
 		monthCallbacks.triggerCallbacks(now)
 	}
 }
 
+// startDailyTimers manages precise daily callbacks at specific times
 func startDailyTimers(tz *time.Location) {
+	// Initialize empty callback map
 	callbackMap.Store(make(map[timeKey][]TimedCallbackFunc))
 
-	defer log.Println("[timestate] startDailyTimers finish")
+	defer log.Println("[timestate] Daily timer service started")
 
+	// rebuildCallbackMap reconstructs the callback lookup map from registered callbacks
 	rebuildCallbackMap := func() {
 		dailyTimedMu.RLock()
 		defer dailyTimedMu.RUnlock()
@@ -136,28 +155,30 @@ func startDailyTimers(tz *time.Location) {
 		callbackMap.Store(newMap)
 	}
 
+	// Initial map build
 	rebuildCallbackMap()
 
-	// 异步监听注册变更
+	// Watch for registration changes
 	go func() {
 		for range dailyTimedRegisterChan {
 			rebuildCallbackMap()
 		}
 	}()
 
-	// 定时触发器
+	// Main timing loop
 	go func() {
 		for {
 			now := time.Now().In(tz)
 			nextTick := now.Truncate(time.Minute).Add(time.Minute)
-			time.Sleep(time.Until(nextTick)) // 等到下一个整分钟
+			time.Sleep(time.Until(nextTick)) // Wait until next minute
 
 			now = nextTick
 			key := timeKey{now.Hour(), now.Minute()}
 
+			// Load and execute matching callbacks
 			cbMap, ok := callbackMap.Load().(map[timeKey][]TimedCallbackFunc)
 			if !ok {
-				log.Println("[timestate] 错误: callback map 类型断言失败")
+				log.Println("[timestate] Error: callback map type assertion failed")
 				continue
 			}
 			callbacks := cbMap[key]
@@ -165,8 +186,9 @@ func startDailyTimers(tz *time.Location) {
 				continue
 			}
 
-			log.Printf("[timestate] 精准触发 %d 个每日定时任务 @ %02d:%02d", len(callbacks), now.Hour(), now.Minute())
+			log.Printf("[timestate] Triggering %d daily callbacks @ %02d:%02d", len(callbacks), now.Hour(), now.Minute())
 
+			// Execute callbacks with timeout control
 			var wg sync.WaitGroup
 			wg.Add(len(callbacks))
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -186,29 +208,32 @@ func startDailyTimers(tz *time.Location) {
 
 			select {
 			case <-done:
-				// 正常完成
+				// All callbacks completed
 			case <-ctx.Done():
-				log.Printf("[timestate] 警告: 每日定时任务执行超时 @ %02d:%02d", now.Hour(), now.Minute())
+				log.Printf("[timestate] Warning: Daily callbacks timed out @ %02d:%02d", now.Hour(), now.Minute())
 			}
 			cancel()
 		}
 	}()
 }
 
-// updateTimeStates 更新零点与下周期时间戳
+// updateTimeStates recalculates all time-based state variables
 func updateTimeStates(t time.Time) {
 	today := getTodayMidnight(t)
 	currentKey := getCurrentPeriodKey(t)
 	nextKey := getNextPeriodKey(t)
 
+	// Update atomic values
 	currentWeekKey.Store(currentKey)
 	nextWeekKey.Store(nextKey)
 	atomic.StoreInt64(&zeroMsTimestamp, today.UnixMilli())
 	atomic.StoreInt64(&zeroSecTimestamp, today.Unix())
 	zeroDateValue.Store(today.Format("2006-01-02"))
 
+	// Calculate next boundaries
 	atomic.StoreInt64(&nextDayTimestamp, today.Add(24*time.Hour).Unix())
 
+	// Calculate next week (following Monday)
 	offset := (8 - int(today.Weekday())) % 7
 	if offset == 0 {
 		offset = 7
@@ -216,34 +241,36 @@ func updateTimeStates(t time.Time) {
 	nextWeek := today.AddDate(0, 0, offset)
 	atomic.StoreInt64(&nextWeekTimestamp, nextWeek.Unix())
 
+	// Calculate next month (first day)
 	nextMonth := time.Date(today.Year(), today.Month()+1, 1, 0, 0, 0, 0, today.Location())
 	atomic.StoreInt64(&nextMonthTimestamp, nextMonth.Unix())
 }
 
+// getTodayMidnight returns the midnight time for the given date
 func getTodayMidnight(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
-// BuildPeriodKey 生成指定时间的周期 Key，格式为 "YYYY-MM-Wn"
+// BuildPeriodKey generates a period key string in "YYYY-MM-Wn" format
 func BuildPeriodKey(t time.Time) string {
 	year, month := t.Year(), int(t.Month())
 	week := GetWeekOfMonth(t)
 	return fmt.Sprintf("%04d-%02d-W%d", year, month, week)
 }
 
-// GetCurrentPeriodKey 返回当前时间的周期 Key
+// getCurrentPeriodKey returns the period key for the current time
 func getCurrentPeriodKey(t time.Time) string {
 	return BuildPeriodKey(t)
 }
 
-// GetNextPeriodKey 返回当前时间 +7 天后的周期 Key
+// getNextPeriodKey returns the period key for the time 7 days from now
 func getNextPeriodKey(t time.Time) string {
 	return BuildPeriodKey(t.AddDate(0, 0, 7))
 }
 
-// GetWeekOfMonth 根据给定时间，返回该时间在本月的第几周（周一为起始）
+// GetWeekOfMonth calculates which week of the month the date falls in (Monday-based)
 func GetWeekOfMonth(t time.Time) int {
-    // 调整星期，将周一变为0，周日变为6
+    // Adjust weekday so Monday=0, Sunday=6
     adjustedWeekday := func(day time.Weekday) int {
         return (int(day) + 6) % 7
     }
@@ -251,11 +278,11 @@ func GetWeekOfMonth(t time.Time) int {
     firstDay := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
     offsetDays := t.Day() - 1 + adjustedWeekday(firstDay.Weekday())
 
-    // 计算第几周，整除7后加1
+    // Calculate week number (1-based)
     return (offsetDays / 7) + 1
 }
 
-
+// triggerCallbacks safely executes all registered callbacks
 func (m *callbackManager) triggerCallbacks(t time.Time) {
 	m.mu.RLock()
 	cbs := append([]func(time.Time){}, m.callbacks...)
@@ -266,17 +293,18 @@ func (m *callbackManager) triggerCallbacks(t time.Time) {
 	}
 }
 
+// safeCall executes a callback with panic recovery
 func safeCall(cb func(time.Time), t time.Time) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("[timestate] 回调 panic: %v", r)
+			log.Printf("[timestate] Callback panic: %v", r)
 		}
 	}()
 	cb(t)
 }
 
 // ===========================
-// ✅ 注册接口（改造每日定时回调）
+// ✅ Callback Registration
 // ===========================
 
 func RegisterDayCallback(fn func(time.Time)) {
@@ -297,10 +325,10 @@ func RegisterMonthCallback(fn func(time.Time)) {
 	monthCallbacks.callbacks = append(monthCallbacks.callbacks, fn)
 }
 
-// 注册接口改成带 context 参数
+// RegisterDailyTimeCallback adds a new timed daily callback
 func RegisterDailyTimeCallback(hour, minute int, fn TimedCallbackFunc) {
     if hour < 0 || hour > 23 || minute < 0 || minute > 59 {
-        log.Printf("[timestate] 无效时间参数 hour=%d, minute=%d", hour, minute)
+        log.Printf("[timestate] Invalid time parameters hour=%d, minute=%d", hour, minute)
         return
     }
     dailyTimedMu.Lock()
@@ -311,17 +339,19 @@ func RegisterDailyTimeCallback(hour, minute int, fn TimedCallbackFunc) {
     })
     dailyTimedMu.Unlock()
 
+    // Notify about registration (non-blocking)
     select {
     case dailyTimedRegisterChan <- struct{}{}:
     default:
     }
 }
 
-// 触发指定时间回调，带超时控制
+// TriggerDailyCallbackWithTimeout manually triggers callbacks for a specific time with timeout control
 func TriggerDailyCallbackWithTimeout(hour, minute int, timeout time.Duration) {
     dailyTimedMu.RLock()
     defer dailyTimedMu.RUnlock()
 
+    // Find matching callbacks
     var matched []TimedCallbackFunc
     for _, tcb := range dailyTimedCallbacks {
         if tcb.Hour == hour && tcb.Minute == minute {
@@ -330,10 +360,11 @@ func TriggerDailyCallbackWithTimeout(hour, minute int, timeout time.Duration) {
     }
 
     if len(matched) == 0 {
-        log.Printf("[timestate] 没有找到匹配的定时回调 @ %02d:%02d", hour, minute)
+        log.Printf("[timestate] No matching callbacks found @ %02d:%02d", hour, minute)
         return
     }
 
+    // Execute with timeout
     ctx, cancel := context.WithTimeout(context.Background(), timeout)
     defer cancel()
 
@@ -355,24 +386,24 @@ func TriggerDailyCallbackWithTimeout(hour, minute int, timeout time.Duration) {
 
     select {
     case <-done:
-        log.Printf("[timestate] 所有定时回调执行完成 @ %02d:%02d", hour, minute)
+        log.Printf("[timestate] All callbacks completed @ %02d:%02d", hour, minute)
     case <-ctx.Done():
-        log.Printf("[timestate] 定时回调执行超时 @ %02d:%02d", hour, minute)
+        log.Printf("[timestate] Callback execution timed out @ %02d:%02d", hour, minute)
     }
 }
 
-
+// safeCallContext executes a context-aware callback with panic recovery
 func safeCallContext(cb TimedCallbackFunc, ctx context.Context, t time.Time) {
     defer func() {
         if r := recover(); r != nil {
-            log.Printf("[timestate] 带 context 的回调 panic: %v", r)
+            log.Printf("[timestate] Context callback panic: %v", r)
         }
     }()
     cb(ctx, t)
 }
 
 // ===========================
-// ✅ 读取接口
+// ✅ State Accessors
 // ===========================
 func GetZeroMs() int64   { return atomic.LoadInt64(&zeroMsTimestamp) }
 func GetZeroSec() int64  { return atomic.LoadInt64(&zeroSecTimestamp) }
