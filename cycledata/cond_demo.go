@@ -36,7 +36,7 @@ func GameInfo(){
             MiscData:   make(map[string]interface{}),
         }
     })
-    RegisterCreator(DailyCycle, TypeKey(1), func(userID)(*PlayerData){
+    RegisterCreator(DailyCycle, TypeKey(1), func(userID UserID)(*PlayerData){
         // 从数据库或缓存加载数据，示例返回空数据
         return &PlayerData{
             UserID:     userID,
