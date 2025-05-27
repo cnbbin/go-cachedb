@@ -5,30 +5,30 @@ import (
 	"time"
 )
 
-type FlushHandler[T any] interface {
-	Flush(data []T) error
+type ListFlushHandler interface {
+	Flush(data []interface{}) error
 }
 
-type CacheService[T any] struct {
-	handler  FlushHandler[T]
+type CacheService struct {
+	handler  ListFlushHandler
 	interval time.Duration
 
 	mutex   sync.Mutex
-	cache   []T
+	cache   []interface{}
 	stopCh  chan struct{}
 	started bool
 }
 
-func NewCacheService[T any](handler FlushHandler[T], interval time.Duration) *CacheService[T] {
-	return &CacheService[T]{
+func NewCacheService(handler ListFlushHandler, interval time.Duration) *CacheService {
+	return &CacheService{
 		handler:  handler,
 		interval: interval,
-		cache:    make([]T, 0),
+		cache:    make([]interface{}, 0),
 		stopCh:   make(chan struct{}),
 	}
 }
 
-func (s *CacheService[T]) Start() {
+func (s *CacheService) Start() {
 	if s.started {
 		return
 	}
@@ -36,7 +36,7 @@ func (s *CacheService[T]) Start() {
 	go s.run()
 }
 
-func (s *CacheService[T]) Stop() {
+func (s *CacheService) Stop() {
 	if !s.started {
 		return
 	}
@@ -44,32 +44,33 @@ func (s *CacheService[T]) Stop() {
 	s.started = false
 }
 
-func (s *CacheService[T]) Push(data T) {
+func (s *CacheService) Push(data interface{}) {
 	s.mutex.Lock()
 	s.cache = append(s.cache, data)
 	s.mutex.Unlock()
 }
 
-func (s *CacheService[T]) run() {
-    ticker := time.NewTicker(s.interval)
-    defer ticker.Stop()
+func (s *CacheService) run() {
+	ticker := time.NewTicker(s.interval)
+	defer ticker.Stop()
 
-    for {
-        select {
-        case <-ticker.C:
-            s.flush()
-        case _, ok := <-s.stopCh:  // 检查通道是否已关闭
-            if !ok {
-                s.flush()
-                return
-            }
-        }
-    }
+	for {
+		select {
+		case <-ticker.C:
+			s.flush()
+		case _, ok := <-s.stopCh:
+			if !ok {
+				s.flush()
+				return
+			}
+		}
+	}
 }
-func (s *CacheService[T]) flush() {
+
+func (s *CacheService) flush() {
 	s.mutex.Lock()
 	data := s.cache
-	s.cache = make([]T, 0)
+	s.cache = make([]interface{}, 0)
 	s.mutex.Unlock()
 	if len(data) > 0 && s.handler != nil {
 		_ = s.handler.Flush(data)

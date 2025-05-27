@@ -1,5 +1,10 @@
 package cache
 
+import (
+	"sync"
+	"log"
+)
+
 // 外部数据结构
 type ClothesData struct {
 	ID         int64
@@ -77,9 +82,10 @@ func BatchUpdatePlayersClothes(updates []ClothesData) error {
 	// }
 
 	// return nil
+	return nil
 }
 
-func (h *PlayerClothesFlushHandler) Flush(data []any) error {
+func (h *PlayerClothesFlushHandler) Flush(data []interface{}) error {
 	// 处理 Flush 操作
 	dataLen := len(data)
 	if dataLen == 0 {
@@ -104,7 +110,7 @@ func (h *PlayerClothesFlushHandler) Flush(data []any) error {
 // 调整为列表记录
 type ListHandler struct{}
 
-func (h *ListHandler) Flush(data []any) error {
+func (h *ListHandler) Flush(data []interface{}) error {
 	// 这里实现你的刷新逻辑，比如将数据写入数据库、发送到远程服务等
 	return nil
 }

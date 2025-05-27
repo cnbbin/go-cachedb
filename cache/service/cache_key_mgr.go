@@ -5,30 +5,30 @@ import (
 	"time"
 )
 
-type FlushKeyHandler[T any] interface {
-	FlushKey(data []T) error
+type KVFlushHandler interface {
+	Flush(data []interface{}) error
 }
 
-type KVCacheService[T any] struct {
-	handler  FlushHandler[T]
+type KVCacheService struct {
+	handler  KVFlushHandler
 	interval time.Duration
 
 	mutex   sync.Mutex
-	cache   map[any]T
+	cache   map[interface{}]interface{}
 	stopCh  chan struct{}
 	started bool
 }
 
-func NewKVCacheService[T any](handler FlushHandler[T], interval time.Duration) *KVCacheService[T] {
-	return &KVCacheService[T]{
+func NewKVCacheService(handler KVFlushHandler, interval time.Duration) *KVCacheService {
+	return &KVCacheService{
 		handler:  handler,
 		interval: interval,
-		cache:    make(map[any]T),
+		cache:    make(map[interface{}]interface{}),
 		stopCh:   make(chan struct{}),
 	}
 }
 
-func (s *KVCacheService[T]) Start() {
+func (s *KVCacheService) Start() {
 	if s.started {
 		return
 	}
@@ -36,7 +36,7 @@ func (s *KVCacheService[T]) Start() {
 	go s.run()
 }
 
-func (s *KVCacheService[T]) Stop() {
+func (s *KVCacheService) Stop() {
 	if !s.started {
 		return
 	}
@@ -44,14 +44,13 @@ func (s *KVCacheService[T]) Stop() {
 	s.started = false
 }
 
-// 处理如果跟上次key一样
-func (s *KVCacheService[T]) UpdateKeyValue(key any, value T) {
+func (s *KVCacheService) UpdateKeyValue(key interface{}, value interface{}) {
 	s.mutex.Lock()
 	s.cache[key] = value
 	s.mutex.Unlock()
 }
 
-func (s *KVCacheService[T]) run() {
+func (s *KVCacheService) run() {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
@@ -68,13 +67,13 @@ func (s *KVCacheService[T]) run() {
 	}
 }
 
-func (s *KVCacheService[T]) flush() {
+func (s *KVCacheService) flush() {
 	s.mutex.Lock()
-	data := make([]T, 0, len(s.cache))
+	data := make([]interface{}, 0, len(s.cache))
 	for _, v := range s.cache {
 		data = append(data, v)
 	}
-	s.cache = make(map[any]T)
+	s.cache = make(map[interface{}]interface{})
 	s.mutex.Unlock()
 	if len(data) > 0 && s.handler != nil {
 		_ = s.handler.Flush(data)
