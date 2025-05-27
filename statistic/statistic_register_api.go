@@ -76,6 +76,37 @@ func (m *StatisticManager) RegisterStaticFunc(handler StatisticHandler, f func(s
 }
 
 
+// RegisterWorkerFunc 为指定处理器注册worker函数，用于对静态类别数据进行二次加工处理
+func (m *StatisticManager) RegisterWorkerDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32, otherValue int32)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	hInfo, exists := m.registries[handler]
+	if !exists {
+		hInfo = &handlerInfo{
+			staticInfo: make(map[StatisticType][]StatisticTypeCategory),
+		}
+		m.registries[handler] = hInfo
+	}
+	hInfo.workerDoubleFunc = f
+}
+
+// RegisterStaticFunc 注册 staticFunc，用于带额外参数的处理逻辑
+func (m *StatisticManager) RegisterStaticDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32 ,otherValue int32)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	hInfo, exists := m.registries[handler]
+	if !exists {
+		hInfo = &handlerInfo{
+			staticInfo: make(map[StatisticType][]StatisticTypeCategory),
+		}
+		m.registries[handler] = hInfo
+	}
+	hInfo.staticDoubleFunc = f
+}
+
+
 // ==== 全局包装函数，方便直接调用全局单例管理器 ====
 
 // RegisterCategories 注册静态类别
@@ -98,6 +129,19 @@ func RegisterQueryFunc(handler StatisticHandler, f func(statType StatisticType) 
 func RegisterWorkerFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32) []StatisticTypeCategory) {
 	GetGlobalManager().RegisterWorkerFunc(handler, f)
 }
+
+
+// RegisterWorkerFunc 注册worker函数
+func RegisterWorkerDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32, otherValue int32)) {
+	GetGlobalManager().RegisterWorkerDoubleFunc(handler, f)
+}
+
+
+// RegisterStaticFunc 注册 staticFunc
+func RegisterStaticDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32, otherValue int32)) {
+	GetGlobalManager().RegisterStaticDoubleFunc(handler, f)
+}
+
 
 // GetCategories 获取类别
 func GetCategories(handler StatisticHandler, t StatisticType) []StatisticTypeCategory {

@@ -115,9 +115,74 @@ func (m *StatisticManager) ApplyStaticFunc(handler StatisticHandler, t Statistic
 
 
 
+// ApplyStaticFunc 尝试调用指定 handler 的 staticFunc（若有 workerFunc 先加工）
+func (m *StatisticManager) ApplyStaticDoubleFunc(handler StatisticHandler, t StatisticType, addValue int32, otherValue int32) {
+	// Step 1: 尝试从 registries 获取 handlerInfo
+	m.mu.RLock()
+	hInfo, exists := m.registries[handler]
+	m.mu.RUnlock()
+
+	// Step 2: 若不存在则 fallback 到 queryFunc 获取类别并注册
+	if !exists {
+		m.mu.RLock()
+		queryFunc, hasQueryFunc := m.queryFuncs[handler]
+		m.mu.RUnlock()
+
+		if !hasQueryFunc || queryFunc == nil {
+			return
+		}
+
+		categories := queryFunc(t)
+		if len(categories) == 0 {
+			return
+		}
+
+		m.mu.Lock()
+		hInfo, exists = m.registries[handler]
+		if !exists {
+			hInfo = &handlerInfo{
+				staticInfo: make(map[StatisticType][]StatisticTypeCategory),
+			}
+			m.registries[handler] = hInfo
+		}
+		if _, ok := hInfo.staticInfo[t]; !ok {
+			hInfo.staticInfo[t] = categories
+		}
+		m.mu.Unlock()
+	}
+
+	// Step 3: 重新获取 handlerInfo 和处理函数
+	m.mu.RLock()
+	hInfo = m.registries[handler]
+	categories := hInfo.staticInfo[t]
+	workerDoubleFunc := hInfo.workerDoubleFunc
+	staticDoubleFunc := hInfo.staticDoubleFunc
+	m.mu.RUnlock()
+
+	if len(categories) == 0 || staticFunc == nil {
+		return
+	}
+
+	// Step 4: 若有 workerDoubleFunc
+	if workerFunc != nil {
+		categories = workerDoubleFunc(t, categories, addValue)
+	}
+
+	// Step 5: 调用 staticDoubleFunc
+	staticDoubleFunc(t, categories, addValue)
+}
+
+
+
 
 
 // ApplyStaticFunc 调用
 func ApplyStaticFunc(handler StatisticHandler, t StatisticType, addValue int32) {
 	GetGlobalManager().ApplyStaticFunc(handler, t, addValue)
+}
+
+
+// ApplyStaticFunc 调用
+func ApplyStaticDoubleFunc(handler StatisticHandler, t StatisticType, addValue int32) {
+	GetGlobalManager().ApplyStaticDoubleFunc(handler, t, addValue)
 }
