@@ -159,12 +159,12 @@ func (m *StatisticManager) ApplyStaticDoubleFunc(handler StatisticHandler, t Sta
 	staticDoubleFunc := hInfo.staticDoubleFunc
 	m.mu.RUnlock()
 
-	if len(categories) == 0 || staticFunc == nil {
+	if len(categories) == 0 || staticDoubleFunc == nil {
 		return
 	}
 
 	// Step 4: 若有 workerDoubleFunc
-	if workerFunc != nil {
+	if workerDoubleFunc != nil {
 		categories = workerDoubleFunc(t, categories, addValue, otherValue)
 	}
 
