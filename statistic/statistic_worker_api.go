@@ -165,11 +165,11 @@ func (m *StatisticManager) ApplyStaticDoubleFunc(handler StatisticHandler, t Sta
 
 	// Step 4: 若有 workerDoubleFunc
 	if workerFunc != nil {
-		categories = workerDoubleFunc(t, categories, addValue)
+		categories = workerDoubleFunc(t, categories, addValue, otherValue)
 	}
 
 	// Step 5: 调用 staticDoubleFunc
-	staticDoubleFunc(t, categories, addValue)
+	staticDoubleFunc(t, categories, addValue, otherValue)
 }
 
 
@@ -183,6 +183,6 @@ func ApplyStaticFunc(handler StatisticHandler, t StatisticType, addValue int32) 
 
 
 // ApplyStaticFunc 调用
-func ApplyStaticDoubleFunc(handler StatisticHandler, t StatisticType, addValue int32) {
-	GetGlobalManager().ApplyStaticDoubleFunc(handler, t, addValue)
+func ApplyStaticDoubleFunc(handler StatisticHandler, t StatisticType, addValue int32, otherValue int32) {
+	GetGlobalManager().ApplyStaticDoubleFunc(handler, t, addValue, otherValue)
 }
