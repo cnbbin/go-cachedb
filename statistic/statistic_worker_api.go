@@ -16,10 +16,6 @@ func (m *StatisticManager) GetCategories(handler StatisticHandler, t StatisticTy
 	if exists {
 		// 先尝试获取静态缓存的类别
 		if cats, ok := hInfo.staticInfo[t]; ok && len(cats) > 0 {
-			// 如果有workerFunc则调用，进行结果加工后返回
-			if hInfo.workerFunc != nil {
-				return hInfo.workerFunc(t, cats)
-			}
 			return cats
 		}
 	}

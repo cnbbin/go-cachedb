@@ -95,7 +95,7 @@ func RegisterQueryFunc(handler StatisticHandler, f func(statType StatisticType) 
 }
 
 // RegisterWorkerFunc 注册worker函数
-func RegisterWorkerFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory) []StatisticTypeCategory) {
+func RegisterWorkerFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32) []StatisticTypeCategory) {
 	GetGlobalManager().RegisterWorkerFunc(handler, f)
 }
 
