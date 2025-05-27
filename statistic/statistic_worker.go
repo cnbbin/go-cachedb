@@ -110,7 +110,7 @@ func (m *StatisticManager) ApplyStaticFunc(handler StatisticHandler, t Statistic
 
 	// Step 4: 若有 workerFunc，则先处理
 	if workerFunc != nil {
-		categories = workerFunc(t, categories)
+		categories = workerFunc(t, categories, addValue)
 	}
 
 	// Step 5: 调用 staticFunc

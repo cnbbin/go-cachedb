@@ -15,7 +15,7 @@ type StatisticTypeCategory int32
 
 // handlerInfo 记录每个处理器相关的信息，包括静态类别和可选的worker函数
 type handlerInfo struct {
-	workerFunc func(statType StatisticType, categories []StatisticTypeCategory) []StatisticTypeCategory // 可选的worker处理函数，用于加工类别
+	workerFunc func(statType StatisticType, categories []StatisticTypeCategory, addValue int32) []StatisticTypeCategory // 可选的worker处理函数，用于加工类别
 	staticFunc func(statType StatisticType, categories []StatisticTypeCategory, addValue int32)                      // 可选的静态处理函数，用于自定义带参数处理
 	staticInfo map[StatisticType][]StatisticTypeCategory                                              // 静态缓存的类别信息，key为统计类型
 }

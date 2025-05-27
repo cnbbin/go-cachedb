@@ -46,7 +46,7 @@ func (m *StatisticManager) RegisterQueryFunc(handler StatisticHandler, f func(st
 }
 
 // RegisterWorkerFunc 为指定处理器注册worker函数，用于对静态类别数据进行二次加工处理
-func (m *StatisticManager) RegisterWorkerFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory) []StatisticTypeCategory) {
+func (m *StatisticManager) RegisterWorkerFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32) []StatisticTypeCategory) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -82,6 +82,12 @@ func (m *StatisticManager) RegisterStaticFunc(handler StatisticHandler, f func(s
 func RegisterCategories(handler StatisticHandler, t StatisticType, categories []StatisticTypeCategory) {
 	GetGlobalManager().RegisterCategories(handler, t, categories)
 }
+
+// RegisterCategories 注册静态类别
+func ResetRegisterCategories(handler StatisticHandler, t StatisticType, categories []StatisticTypeCategory) {
+	GetGlobalManager().ResetRegisterCategories(handler, t, categories)
+}
+
 
 // RegisterQueryFunc 注册动态查询函数
 func RegisterQueryFunc(handler StatisticHandler, f func(statType StatisticType) []StatisticTypeCategory) {
