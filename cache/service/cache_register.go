@@ -41,7 +41,7 @@ func RegisterKVService(id string, handler KVFlushHandler, interval time.Duration
 		ID:    id,
 		Cache: kvService,
 	}
-	cache.GetServer().RegisterModule(module)
+	GetServer().RegisterModule(module)
 }
 
 // RegisterListService 注册列表缓存服务
@@ -60,7 +60,7 @@ func RegisterListService(id string, handler ListFlushHandler, interval time.Dura
 		ID:    id,
 		Cache: listService,
 	}
-	cache.GetServer().RegisterModule(module)
+	GetServer().RegisterModule(module)
 }
 
 // InitializeServices 初始化所有注册的服务
