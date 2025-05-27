@@ -30,10 +30,18 @@ var registry = &CacheServiceRegistry{
 func RegisterKVService(id string, handler KVFlushHandler, interval time.Duration, initializer func()) {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
-
-	registry.kvServices[id] = NewKVCacheService(handler, interval)
+	// 创建 KV 缓存服务
+	kvService := NewKVCacheService(handler, interval)
+	registry.kvServices[id] = kvService
 	registry.kvInitializers[id] = initializer
 	registry.kvHandlers[id] = handler
+
+	// 自动注册到 cache.Server
+	module := &KeyCacheModule{
+		ID:    id,
+		Cache: kvService,
+	}
+	cache.GetServer().RegisterModule(module)
 }
 
 // RegisterListService 注册列表缓存服务
@@ -41,9 +49,18 @@ func RegisterListService(id string, handler ListFlushHandler, interval time.Dura
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
 
-	registry.listServices[id] = NewCacheService(handler, interval)
+	// 创建 List 缓存服务
+	listService := NewCacheService(handler, interval)
+	registry.listServices[id] = listService
 	registry.listInitializers[id] = initializer
 	registry.listHandlers[id] = handler
+
+	// 自动注册到 cache.Server
+	module := &ListCacheModule{
+		ID:    id,
+		Cache: listService,
+	}
+	cache.GetServer().RegisterModule(module)
 }
 
 // InitializeServices 初始化所有注册的服务
