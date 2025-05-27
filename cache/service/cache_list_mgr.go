@@ -50,6 +50,7 @@ func (s *CacheService) Push(data interface{}) {
 	s.mutex.Unlock()
 }
 
+// todo 调整为 注册对应定时器
 func (s *CacheService) run() {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
