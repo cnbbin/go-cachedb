@@ -104,3 +104,23 @@ timestate
     // 其他服务停止的时候调用一下
     cycledata.FlushAll()
 ```
+
+### 注册加载器、创建器和存储器
+### 绑定过期时间
+
+```go
+    func InitData(){
+        log.Printf("Initialized KV cache service")
+    }
+    // 调整为列表记录
+    type ListHandler struct{}
+
+    func (h *ListHandler) Flush(data []interface{}) error {
+
+        // 这里实现你的刷新逻辑，比如将数据写入数据库、发送到远程服务等
+        return nil
+    }
+
+
+    cache.RegisterListService("listPlayerCurrency", &ListHandler{}, 5*time.Second,  func(){InitData()})
+```
