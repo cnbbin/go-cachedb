@@ -1,10 +1,8 @@
 package cache
 
-
 import (
 	"sync"
 	"time"
-	"fmt"
 )
 
 type FlushKeyHandler[T any] interface {
@@ -51,7 +49,6 @@ func (s *KVCacheService[T]) UpdateKeyValue(key any, value T) {
 	s.mutex.Lock()
 	s.cache[key] = value
 	s.mutex.Unlock()
-	fmt.Println("UpdateKeyValue", key, value)
 }
 
 func (s *KVCacheService[T]) run() {
