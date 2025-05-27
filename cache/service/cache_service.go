@@ -40,7 +40,6 @@ func NewCacheServer() *Server {
 
 // GetServer 获取服务器实例 (单例模式)
 func GetServer() *Server {
-	log.Printf("[Server] Started module: %s", "单例模式")
 	once.Do(func() {
 		srv = NewCacheServer()
 	})
