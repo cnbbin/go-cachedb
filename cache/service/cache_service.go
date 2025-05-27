@@ -30,7 +30,6 @@ var (
 // NewCacheServer 构造函数
 func NewCacheServer() *Server {
 	once.Do(func() {
-		log.Printf("[Server] srv module: %s", "单例模式")
 		srv = &Server{
 			Modules: make(map[string]Module),
 		}
