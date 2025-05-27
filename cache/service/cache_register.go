@@ -133,7 +133,7 @@ func (d *ListCacheModule) Name() string {
 // 初始化函数 - 在程序启动时调用
 func init() {
 	// 注册所有KV缓存服务
-	RegisterKVService("kvPlayerClothes", &PlayerClothesFlushHandler{}, 1*time.Second, InitPlayerClothes)
+	// RegisterKVService("kvPlayerClothes", &PlayerClothesFlushHandler{}, 1*time.Second, InitPlayerClothes)
 	// 注册列表缓存服务
-	RegisterListService("listPlayerCurrency", &MyHandler{}, 5*time.Second, InitPlayerClothes)
+	// RegisterListService("listPlayerCurrency", &MyHandler{}, 5*time.Second, InitPlayerClothes)
 }
