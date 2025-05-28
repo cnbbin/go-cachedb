@@ -46,4 +46,47 @@ func AppendToInt32SliceIf(cycle CycleType, typeKey TypeKey, userID UserID, key s
 	return true
 }
 
+/*
+ * RemoveFromInt32SliceIf 尝试从指定 []int32 类型的键值中删除元素 val
+ * 条件：
+ *   - val 存在于切片中
+ *   - cond(slice) 返回 true
+ * 删除成功后更新时间
+ * 返回是否删除成功
+ */
+func RemoveFromInt32SliceIf(cycle CycleType, typeKey TypeKey, userID UserID, key string, val int32, cond func([]int32) bool) bool {
+	pd := GetData(cycle, typeKey, userID)
+	if pd == nil {
+		return false
+	}
 
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	raw, ok := pd.MiscData[key]
+	if !ok {
+		return false
+	}
+
+	slice, ok := raw.([]int32)
+	if !ok {
+		// 字段存在，但不是[]int32类型，直接返回false
+		return false
+	}
+
+	if !cond(slice) {
+		return false
+	}
+
+	// 删除元素
+	newSlice := make([]int32, 0, len(slice)-1)
+	for _, v := range slice {
+		if v != val {
+			newSlice = append(newSlice, v)
+		}
+	}
+
+	pd.MiscData[key] = newSlice
+	pd.UpdateTime = time.Now()
+	return true
+}
