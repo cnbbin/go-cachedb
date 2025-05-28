@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"sync"
 	"log"
+	"sync"
 )
 
 // 外部数据结构
@@ -12,7 +12,6 @@ type ClothesData struct {
 	MiscData   map[string]interface{} // 数据杂项
 	mutex      sync.RWMutex           // 独立锁
 }
-
 
 // 假设你有一个自定义的 handler 需要落库
 type PlayerClothesFlushHandler struct{}
