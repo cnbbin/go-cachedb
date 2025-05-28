@@ -37,9 +37,7 @@ timestate
     fmt.Println("nextdaytimestamp" , timestate.GetNextDayTimestamp())
     fmt.Println("nextweektimestamp" , timestate.GetNextWeekTimestamp())
     fmt.Println("nextmonthtimestamp" , timestate.GetNextMonthTimestamp())
-    userID := cycledata.UserID(1001)
-    cycle := cycledata.DailyCycle
-    typeKey := cycledata.TypeKey(1)
+
     cycledata.RegisterLoader(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, userID cycledata.UserID) *cycledata.PlayerData {
         // 模拟加载数据 （记得加载的时候判断对应过期时间和当前时间）
         return &cycledata.PlayerData{
@@ -87,14 +85,19 @@ timestate
     timestate.RegisterDayCallback(func(t time.Time) {
         cycledata.CleanExpiredDataByType(cycledata.DailyCycle, cycledata.TypeKey(1))
     })
-    // 获取数据（自动加载或创建）
+    userID := cycledata.UserID(1001)
+    cycle := cycledata.DailyCycle
+    typeKey := cycledata.TypeKey(1)
+    // 获取数据（自动加载或创建）  会先调用loader 没数据后会调用Creator
+
     data := cycledata.GetData(cycle, typeKey, userID)
      if data == nil {
        fmt.Println("Appended achievement" , cycle, typeKey, userID , nil )
      }else{
        fmt.Println("Appended achievement" , cycle, typeKey, userID , data.MiscData )
      }
-    // 更新数据字段
+
+    // 直接设置数据
     cycledata.SetData(cycle, typeKey, userID , make(map[string]interface{}))
 
     // 条件追加 int32 切片示例
