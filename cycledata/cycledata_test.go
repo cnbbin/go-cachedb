@@ -145,7 +145,7 @@ func TestCycleHandlerCleanExpiredData(t *testing.T) {
 
 	col := newCollection()
 	now := int32(time.Now().Unix())
-	col.data[1] = &PlayerData{UserID: 1, ExpireTime: now - 1, MiscData: make(map[string]interface{})} // 过期
+	col.data[1] = &PlayerData{UserID: 1, ExpireTime: now - 1, MiscData: make(map[string]interface{})}    // 过期
 	col.data[2] = &PlayerData{UserID: 2, ExpireTime: now + 1000, MiscData: make(map[string]interface{})} // 未过期
 
 	service.collections[1] = col
@@ -267,7 +267,6 @@ func TestUpdateIf(t *testing.T) {
 		t.Errorf("expected UpdateTime to be refreshed")
 	}
 }
-
 
 func TestDecreaseIfEnoughInt(t *testing.T) {
 	cycle := DailyCycle
