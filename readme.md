@@ -1,42 +1,43 @@
-# 项目描述
+# go-cachedb
 
-```System Architecture Requirements
-    系统架构需求
-statistic (统计)  
--Statistic Layer (原子统计层)
---职责：高性能原子计数器，无状态轻量级操作
-cache   (频繁数据) 作用: 定时落地，用于存储数据上报  
--Cache Layer (热数据缓存层)
---职责：临时聚合统计结果，定时刷盘
-cycledata  (周期性/永久数据缓存)  
--CycleData Layer (周期数据层)
---职责：生命周期管理+注册模式核心
-timestate  
--TimeState Layer (时间中枢)
---职责：统一时间管理和周期事件触发
+**go-cachedb** 是一个基于 Go 语言开发的多层级缓存系统，旨在提供高性能的数据缓存解决方案。
+
+## 项目简介
+
+go-cachedb 采用模块化设计，主要包括以下四个核心组件：
+
+- **Statistic Layer（原子统计层）**：提供高性能的原子计数器，用于无状态的轻量级操作。
+- **Cache Layer（热数据缓存层）**：用于临时聚合统计结果，并定时将数据持久化。
+- **CycleData Layer（周期数据层）**：管理周期性或永久性的数据缓存，支持生命周期管理和注册模式。
+- **TimeState Layer（时间中枢）**：统一管理时间相关的操作，如周期事件的触发。
+
+## 安装
+
+使用 `go get` 命令安装：
+
+```bash
+go get github.com/cnbbin/go-cachedb
 ```
 
-## 使用示例
+## 快速开始
 
-### 时间状态机 timestate
+### 初始化时间状态机
+
 ```go
-    timestate.GetNextDayTimestamp()
-    timestate.GetNextWeekTimestamp()
+loc, _ := time.LoadLocation("Asia/Shanghai")
+timestate.InitTimezoneTimer(loc)
+timestate.InitTimer(loc)
+
+now := timestate.GetTimestamp()
+fmt.Println("当前时间戳:", now)
+fmt.Println("下一天时间戳:", timestate.GetNextDayTimestamp())
+fmt.Println("下一周时间戳:", timestate.GetNextWeekTimestamp())
+fmt.Println("下一月时间戳:", timestate.GetNextMonthTimestamp())
 ```
 
-### 周期数据 cycledata
-### 注册加载器、创建器和存储器
-### 绑定过期时间状态机函数
+### 使用周期数据层
 
 ```go
-	loc, _ := time.LoadLocation("Asia/Shanghai")
-    timestate.InitTimezoneTimer(loc)
-    timestate.InitTimer(loc)
-    nowtime := timestate.GetTimestamp()
-    fmt.Println("nowtime" , nowtime)
-    fmt.Println("nextdaytimestamp" , timestate.GetNextDayTimestamp())
-    fmt.Println("nextweektimestamp" , timestate.GetNextWeekTimestamp())
-    fmt.Println("nextmonthtimestamp" , timestate.GetNextMonthTimestamp())
 
     cycledata.RegisterLoader(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, userID cycledata.UserID) *cycledata.PlayerData {
         // 模拟加载数据 （记得加载的时候判断对应过期时间和当前时间）
@@ -115,60 +116,20 @@ timestate
     cycledata.FlushAll()
 ```
 
-### 缓存数据 cache
-### 注册 设置落地函数  初始化函数(上次数据太多兼容临时落地为json文件)
+## 贡献指南
 
-```go
-    func InitData(){
-        log.Printf("Initialized KV cache service")
-    }
-    // 调整为列表记录
-    type ListHandler struct{}
+欢迎对 go-cachedb 项目提出建议或贡献代码。请遵循以下步骤：
 
-    func (h *ListHandler) Flush(data []interface{}) error {
+1. Fork 本仓库。
+2. 创建一个新的分支：`git checkout -b feature/your-feature-name`。
+3. 提交您的更改：`git commit -m 'Add some feature'`。
+4. 推送到分支：`git push origin feature/your-feature-name`。
+5. 提交 Pull Request。
 
-        // 这里实现你的刷新逻辑，比如将数据写入数据库、发送到远程服务等
-        return nil
-    }
+## 许可证
 
+本项目基于 MIT 许可证，详情请参阅 [LICENSE](https://github.com/cnbbin/go-cachedb/blob/main/LICENSE) 文件。
 
-    cache.RegisterListService("listPlayerCurrency", &ListHandler{}, 5*time.Second,  func(){InitData()})
-```
+---
 
-
-## 使用示例
-### 统计数据 statistic
-```go
-
-	const (
-		PlayerLoginHandler statistic.StatisticHandler = 1001
-		DailyLoginType     statistic.StatisticType    = 1
-	)
-	// 注册静态类别
-	statistic.RegisterCategories(PlayerLoginHandler, DailyLoginType, []statistic.StatisticTypeCategory{
-		1, 2, 3, // 可表示不同用户等级、渠道、区服等
-	})
-	// 注册 workerFunc：用于动态加工关联StatisticTypeCategory
-	statistic.RegisterWorkerFunc(PlayerLoginHandler, func(t statistic.StatisticType, cats []statistic.StatisticTypeCategory , addValue int32) []statistic.StatisticTypeCategory {
-		// 示例：给每个类别 +1000
-		for _, c := range cats {
-			fmt.Println("执行 RegisterWorkerFunc 动态处理 statistic.StatisticTypeCategory: %d" , c)
-		}
-		return cats
-	})
-	// 注册 queryFunc：用于回补类别（当未缓存时）
-	statistic.RegisterQueryFunc(PlayerLoginHandler, func(t statistic.StatisticType) []statistic.StatisticTypeCategory {
-		fmt.Println("执行 queryFunc 动态补充类别")
-		return []statistic.StatisticTypeCategory{9, 10}
-	})
-	// 注册 staticFunc：用于执行统计行为
-	statistic.RegisterStaticFunc(PlayerLoginHandler, func(t statistic.StatisticType, cats []statistic.StatisticTypeCategory, add int32) {
-		fmt.Printf("统计行为触发 type=%v, addValue=%d, categories=%v\n", t, add, cats)
-	})
-	// 实际业务中调用统计逻辑
-	addValue := int32(5)
-	statistic.ApplyStaticFunc(PlayerLoginHandler, DailyLoginType, addValue)
-	// 获取最终的类别结果（包含加工）
-	finalCategories := statistic.GetCategories(PlayerLoginHandler, DailyLoginType)
-	fmt.Printf("最终获取到的类别: %v\n", finalCategories)
-```
+如需更详细的文档或示例，请访问项目的 [GitHub 页面](https://github.com/cnbbin/go-cachedb)。
