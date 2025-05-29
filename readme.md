@@ -41,7 +41,7 @@ fmt.Println("下一月时间戳:", timestate.GetNextMonthTimestamp())
 
     cycledata.RegisterLoader(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, userID cycledata.UserID) *cycledata.PlayerData {
         // 模拟加载数据 （记得加载的时候判断对应过期时间和当前时间）
-        // 记得判断当前周期类型的是否到期
+        // 记得判断当前周期类型的是否到期并且转换到ExpireTime里面哈
         return &cycledata.PlayerData{
             UserID:     userID,
             UpdateTime:  int32(timestate.GetSecond()),
