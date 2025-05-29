@@ -44,10 +44,15 @@ func (s *KVCacheService) Stop() {
 	s.started = false
 }
 
-func (s *KVCacheService) UpdateKeyValue(key interface{}, value interface{}) {
+func (s *KVCacheService) UpdateKeyValue(key interface{}, value interface{}) error {
 	s.mutex.Lock()
 	s.cache[key] = value
 	s.mutex.Unlock()
+	return nil
+}
+
+func (s *KVCacheService) Push(data interface{}) error {
+	return nil
 }
 
 // todo 调整为 注册对应定时器

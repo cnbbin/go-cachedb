@@ -1,12 +1,12 @@
 package cache
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-	"context"
 )
 
 // Module 定义模块统一接口
@@ -14,6 +14,8 @@ type Module interface {
 	Start() error
 	Stop() error
 	Name() string
+	Push(data interface{}) error
+	UpdateKeyValue(key int64, value interface{}) error
 }
 
 // Server 结构体，类似 grpc.Server
@@ -23,7 +25,7 @@ type Server struct {
 }
 
 var (
-	srv *Server
+	srv  *Server
 	once sync.Once
 )
 

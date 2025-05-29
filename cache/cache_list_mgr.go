@@ -44,10 +44,15 @@ func (s *CacheService) Stop() {
 	s.started = false
 }
 
-func (s *CacheService) Push(data interface{}) {
+func (s *CacheService) Push(data interface{}) error {
 	s.mutex.Lock()
 	s.cache = append(s.cache, data)
 	s.mutex.Unlock()
+	return nil
+}
+
+func (s *CacheService) UpdateKeyValue(key interface{}, value interface{}) error {
+	return nil
 }
 
 // todo 调整为 注册对应定时器
