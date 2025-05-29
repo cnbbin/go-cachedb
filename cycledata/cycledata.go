@@ -187,8 +187,8 @@ func (dc *dataCollection) cleanCoolData(now int32, cycle CycleType, typeKey Type
 	}
 	// 把 now(int32 秒) 转成 time.Time
 	nowTime := time.Unix(int64(now), 0)
-	// 定义阈值时间，例如 6 小时之前
-	threshold := nowTime.Add(-1 * time.Hour)
+	// 定义阈值时间，例如 4 小时之前
+	threshold := nowTime.Add(-4 * time.Hour)
 	hotData := make(map[UserID]*PlayerData)
 	for uid, data := range dc.data {
 		data.mu.RLock()
