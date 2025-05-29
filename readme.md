@@ -41,6 +41,7 @@ fmt.Println("下一月时间戳:", timestate.GetNextMonthTimestamp())
 
     cycledata.RegisterLoader(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, userID cycledata.UserID) *cycledata.PlayerData {
         // 模拟加载数据 （记得加载的时候判断对应过期时间和当前时间）
+        // 记得判断当前周期类型的是否到期
         return &cycledata.PlayerData{
             UserID:     userID,
             UpdateTime:  int32(timestate.GetSecond()),
@@ -60,6 +61,7 @@ fmt.Println("下一月时间戳:", timestate.GetNextMonthTimestamp())
 
     cycledata.RegisterStorer(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, data *cycledata.PlayerData) error {
         // Store data to database or cache
+        // data.ExpireTime 记得存储周期时间
         fmt.Printf("Storing %s data for user %d (Type: %d)\nDetails: %+v\n",
             cycle,
             data.UserID,
