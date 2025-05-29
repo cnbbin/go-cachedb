@@ -2,6 +2,7 @@ package cycledata
 
 import (
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -366,7 +367,8 @@ func (h *cycleHandler) initPeriodicTasks() {
  * 过程先复制周期列表，避免长时间持锁，提升并发性能和安全性
  */
 func (h *cycleHandler) startCleanupRoutine() {
-	ticker := time.NewTicker(1 * time.Hour)
+	randMinutes := rand.Intn(40) + 10 // 10~50分钟
+	ticker := time.NewTicker(time.Duration(randMinutes) * time.Minute)
 	for range ticker.C {
 		// 读取锁保护访问 services map
 		h.mu.RLock()
