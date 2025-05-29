@@ -100,15 +100,21 @@ func (m *KeyCacheModule) Stop() error {
 }
 
 func (m *KeyCacheModule) Name() string {
-	return "kvcache:" + m.ID
+	return m.ID
 }
 
 func (m *KeyCacheModule) Push(data interface{}) error {
-	return m.Push(data)
+	if m.Cache != nil {
+		return m.Cache.Push(data) // Call the service's method
+	}
+	return nil
 }
 
 func (m *KeyCacheModule) UpdateKeyValue(key int64, data interface{}) error {
-	return m.UpdateKeyValue(key, data)
+	if m.Cache != nil {
+		return m.Cache.UpdateKeyValue(key, data) // Call the service's method
+	}
+	return nil
 }
 
 // ListCacheModule 列表缓存模块
@@ -151,13 +157,19 @@ func (m *ListCacheModule) Stop() error {
 }
 
 func (m *ListCacheModule) Name() string {
-	return "listcache:" + m.ID
+	return m.ID
 }
 
 func (m *ListCacheModule) Push(data interface{}) error {
-	return m.Push(data)
+	if m.Cache != nil {
+		return m.Cache.Push(data) // Call the service's method
+	}
+	return nil
 }
 
 func (m *ListCacheModule) UpdateKeyValue(key int64, data interface{}) error {
-	return m.UpdateKeyValue(key, data)
+	if m.Cache != nil {
+		return m.Cache.UpdateKeyValue(key, data) // Call the service's method
+	}
+	return nil
 }

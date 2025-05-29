@@ -44,7 +44,7 @@ func (s *KVCacheService) Stop() {
 	s.started = false
 }
 
-func (s *KVCacheService) UpdateKeyValue(key interface{}, value interface{}) error {
+func (s *KVCacheService) UpdateKeyValue(key int64, value interface{}) error {
 	s.mutex.Lock()
 	s.cache[key] = value
 	s.mutex.Unlock()
