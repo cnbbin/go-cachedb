@@ -66,7 +66,6 @@ func init() {
 	cleanExpireds = make(map[CycleType]map[TypeKey]func(cycle CycleType, typeKey TypeKey, data *PlayerData))
 }
 
-
 /*
  * 玩家基础数据单元
  * 包含玩家基础数据和扩展字段
@@ -173,38 +172,73 @@ func (dc *dataCollection) set(cycle CycleType, typeKey TypeKey, userID UserID, m
 }
 
 /*
+ * 清理冷数据回收内存
+ */
+func (dc *dataCollection) cleanCoolData(now int32, cycle CycleType, typeKey TypeKey) {
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
+
+	// First check if there's a custom expiration handler for this cycle and type
+	handler := getStore(cycle, typeKey)
+
+	// If no handler exists and no data to process, return early
+	if handler == nil || len(dc.data) == 0 {
+		return
+	}
+	// 把 now(int32 秒) 转成 time.Time
+	nowTime := time.Unix(int64(now), 0)
+	// 定义阈值时间，例如 6 小时之前
+	threshold := nowTime.Add(-6 * time.Hour)
+	hotData := make(map[UserID]*PlayerData)
+	for uid, data := range dc.data {
+		data.mu.RLock()
+		lastUpdate := data.UpdateTime
+		data.mu.RUnlock()
+
+		if lastUpdate.Before(threshold) {
+			if err := handler(cycle, typeKey, data); err != nil {
+				log.Printf("Failed to store cold data for user %d: %v", uid, err)
+			}
+		} else {
+			hotData[data.UserID] = data
+		}
+	}
+	dc.data = hotData
+}
+
+/*
  * 清理过期数据
  */
- func (dc *dataCollection) cleanExpired(now int32, cycle CycleType, typeKey TypeKey) {
-    dc.mu.Lock()
-    defer dc.mu.Unlock()
+func (dc *dataCollection) cleanExpired(now int32, cycle CycleType, typeKey TypeKey) {
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
 
-    // First check if there's a custom expiration handler for this cycle and type
-    handler := getCleanExpired(cycle, typeKey)
-    
-    // If no handler exists and no data to process, return early
-    if handler == nil || len(dc.data) == 0 {
-        return
-    }
+	// First check if there's a custom expiration handler for this cycle and type
+	handler := getCleanExpired(cycle, typeKey)
+
+	// If no handler exists and no data to process, return early
+	if handler == nil || len(dc.data) == 0 {
+		return
+	}
 	isDelete := true
-    for uid, data := range dc.data {
+	for uid, data := range dc.data {
 		// Default expiration logic
 		if data.ExpireTime == 0 {
-			if isDelete{
-				isDelete = false				
+			if isDelete {
+				isDelete = false
 			}
 			continue
 		}
-        if handler != nil {
-            // Use custom expiration handler
-            handler(cycle, typeKey, data)
+		if handler != nil {
+			// Use custom expiration handler
+			handler(cycle, typeKey, data)
 			delete(dc.data, uid)
-            continue
-        }
-        if data.ExpireTime <= now {
-            delete(dc.data, uid)
-        }
-    }
+			continue
+		}
+		if data.ExpireTime <= now {
+			delete(dc.data, uid)
+		}
+	}
 	if isDelete {
 		dc.data = make(map[UserID]*PlayerData)
 	}
@@ -214,7 +248,7 @@ func (dc *dataCollection) set(cycle CycleType, typeKey TypeKey, userID UserID, m
  * 将集合中所有数据刷入存储器
  */
 func (dc *dataCollection) flushAll(cycle CycleType, typeKey TypeKey) {
-	if stores  == nil {
+	if stores == nil {
 		return
 	}
 
@@ -222,7 +256,7 @@ func (dc *dataCollection) flushAll(cycle CycleType, typeKey TypeKey) {
 	defer dc.mu.RUnlock()
 
 	for _, data := range dc.data {
-	// 创建器
+		// 创建器
 		if store := getStore(cycle, typeKey); store != nil {
 			if err := store(cycle, typeKey, data); err != nil {
 				log.Printf("Failed to store data for cycle %v, type %v: %v", cycle, typeKey, err)
@@ -320,7 +354,7 @@ func newCycleHandler() *cycleHandler {
 }
 
 /*
- * 启动定期清理任务
+ * 启动定期冷数据清理任务
  */
 func (h *cycleHandler) initPeriodicTasks() {
 	go h.startCleanupRoutine()
@@ -358,36 +392,36 @@ func (h *cycleHandler) startCleanupRoutine() {
  * 3. 获取当前时间戳
  * 4. 调用数据集合的 cleanExpired 方法
  */
- func (h *cycleHandler) cleanExpiredDataByType(cycle CycleType, typeKey TypeKey) {
-    // 获取对应周期的 service
-    h.mu.RLock()
-    service, ok := h.services[cycle]
-    h.mu.RUnlock()
+func (h *cycleHandler) cleanExpiredDataByType(cycle CycleType, typeKey TypeKey) {
+	// 获取对应周期的 service
+	h.mu.RLock()
+	service, ok := h.services[cycle]
+	h.mu.RUnlock()
 
-    if !ok || service == nil {
-        return
-    }
+	if !ok || service == nil {
+		return
+	}
 
-    // 获取对应类型的数据集合
-    service.mu.RLock()
-    col, ok := service.collections[typeKey]
-    service.mu.RUnlock()
+	// 获取对应类型的数据集合
+	service.mu.RLock()
+	col, ok := service.collections[typeKey]
+	service.mu.RUnlock()
 
-    if !ok || col == nil {
-        return
-    }
+	if !ok || col == nil {
+		return
+	}
 
-    // 获取当前时间戳并清理过期数据
-    now := time.Now()
-    timestamp := int32(now.Unix())
-    col.cleanExpired(timestamp, cycle, typeKey)
+	// 获取当前时间戳并清理过期数据
+	now := time.Now()
+	timestamp := int32(now.Unix())
+	col.cleanExpired(timestamp, cycle, typeKey)
 }
 
 /*
  * CleanExpiredDataByType 公开方法，清理指定周期和类型的过期数据
  */
 func CleanExpiredDataByType(cycle CycleType, typeKey TypeKey) {
-    globalHandler.cleanExpiredDataByType(cycle, typeKey)
+	globalHandler.cleanExpiredDataByType(cycle, typeKey)
 }
 
 /*
@@ -411,8 +445,8 @@ func (h *cycleHandler) cleanExpiredData(cycle CycleType) {
 		return
 	}
 
-    now := time.Now()
-    timestamp := int32(now.Unix())
+	now := time.Now()
+	timestamp := int32(now.Unix())
 
 	// 加读锁访问 service 内部 collections
 	service.mu.RLock()
@@ -424,6 +458,39 @@ func (h *cycleHandler) cleanExpiredData(cycle CycleType) {
 	}
 }
 
+/*
+* cleanCoolData 根据传入的周期 CycleType，清理对应周期服务中的过期数据
+*
+* 1. 先对 cycleHandler 的服务 map 加读锁，获取对应周期的 service 指针
+* 2. 解锁，避免长时间持锁影响并发
+* 3. 如果对应周期的 service 不存在，直接返回
+* 4. 获取当前时间，作为过期判断依据
+* 5. 对 service 内部的 collections 加读锁，遍历所有 TypeKey 对应的数据集合
+* 6. 调用各集合的 cleanExpired 方法，执行具体的过期清理逻辑
+ */
+func (h *cycleHandler) cleanCoolData(cycle CycleType) {
+	// 加读锁读取指定周期的 service
+	h.mu.RLock()
+	service, ok := h.services[cycle]
+	h.mu.RUnlock()
+
+	if !ok || service == nil {
+		// 没有对应周期的服务则不做任何处理
+		return
+	}
+
+	now := time.Now()
+	timestamp := int32(now.Unix())
+
+	// 加读锁访问 service 内部 collections
+	service.mu.RLock()
+	defer service.mu.RUnlock()
+
+	// 遍历所有 TypeKey 对应的数据集合，执行过期清理
+	for typeKey, col := range service.collections {
+		col.cleanCoolData(timestamp, cycle, typeKey)
+	}
+}
 
 /*
  * 获取指定周期服务（自动初始化）
@@ -453,7 +520,7 @@ func (h *cycleHandler) getService(cycle CycleType, expire int32) *cycleService {
  * 刷新指定周期和类型的所有玩家数据
  */
 func Flush(cycle CycleType, typeKey TypeKey) {
-	globalHandler.getService(cycle, DefaultExpireFor(cycle , typeKey)).
+	globalHandler.getService(cycle, DefaultExpireFor(cycle, typeKey)).
 		flush(typeKey, cycle)
 }
 
@@ -473,7 +540,6 @@ func FlushAll() {
  * 全局周期处理器实例
  */
 var globalHandler = newCycleHandler()
-
 
 /*
  * 获取指定加载器
@@ -495,27 +561,25 @@ func getCreator(cycle CycleType, typeKey TypeKey) func(UserID) *PlayerData {
 	return nil
 }
 
-
 /*
  * 获取指定存储器
  */
 // getStore retrieves the appropriate store function for the given cycle and type
 func getStore(cycle CycleType, typeKey TypeKey) func(CycleType, TypeKey, *PlayerData) error {
-    if typeStores, ok := stores[cycle]; ok {
-        if store, ok := typeStores[typeKey]; ok {
-            return store
-        }
-    }
-    return nil
+	if typeStores, ok := stores[cycle]; ok {
+		if store, ok := typeStores[typeKey]; ok {
+			return store
+		}
+	}
+	return nil
 }
-
 
 /*
  * 获取指定过期处理函数
  */
- func getCleanExpired(cycle CycleType, typeKey TypeKey) func(cycle CycleType, typeKey TypeKey, data *PlayerData) {
-    if m, ok := cleanExpireds[cycle]; ok {
-        return m[typeKey]
-    }
-    return nil
+func getCleanExpired(cycle CycleType, typeKey TypeKey) func(cycle CycleType, typeKey TypeKey, data *PlayerData) {
+	if m, ok := cleanExpireds[cycle]; ok {
+		return m[typeKey]
+	}
+	return nil
 }
