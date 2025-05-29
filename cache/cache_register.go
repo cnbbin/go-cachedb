@@ -34,8 +34,8 @@ func RegisterKVService(id string, handler KVFlushHandler, interval time.Duration
 
 	// 注册模块（暂不初始化）
 	module := &KeyCacheModule{
-		ID:         id,
-		Cache:      kvService,
+		ID:          id,
+		Cache:       kvService,
 		initializer: initializer, // 保存初始化函数
 	}
 	GetServer().RegisterModule(module)
@@ -53,8 +53,8 @@ func RegisterListService(id string, handler ListFlushHandler, interval time.Dura
 
 	// 注册模块（暂不初始化）
 	module := &ListCacheModule{
-		ID:         id,
-		Cache:      listService,
+		ID:          id,
+		Cache:       listService,
 		initializer: initializer, // 保存初始化函数
 	}
 	GetServer().RegisterModule(module)
@@ -100,7 +100,21 @@ func (m *KeyCacheModule) Stop() error {
 }
 
 func (m *KeyCacheModule) Name() string {
-	return "kvcache:" + m.ID
+	return m.ID
+}
+
+func (m *KeyCacheModule) Push(data interface{}) error {
+	if m.Cache != nil {
+		return m.Cache.Push(data) // Call the service's method
+	}
+	return nil
+}
+
+func (m *KeyCacheModule) UpdateKeyValue(key int64, data interface{}) error {
+	if m.Cache != nil {
+		return m.Cache.UpdateKeyValue(key, data) // Call the service's method
+	}
+	return nil
 }
 
 // ListCacheModule 列表缓存模块
@@ -143,5 +157,19 @@ func (m *ListCacheModule) Stop() error {
 }
 
 func (m *ListCacheModule) Name() string {
-	return "listcache:" + m.ID
+	return m.ID
+}
+
+func (m *ListCacheModule) Push(data interface{}) error {
+	if m.Cache != nil {
+		return m.Cache.Push(data) // Call the service's method
+	}
+	return nil
+}
+
+func (m *ListCacheModule) UpdateKeyValue(key int64, data interface{}) error {
+	if m.Cache != nil {
+		return m.Cache.UpdateKeyValue(key, data) // Call the service's method
+	}
+	return nil
 }
