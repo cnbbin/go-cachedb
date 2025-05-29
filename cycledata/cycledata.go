@@ -482,13 +482,23 @@ func (h *cycleHandler) cleanCoolData(cycle CycleType) {
 	now := time.Now()
 	timestamp := int32(now.Unix())
 
-	// 加读锁访问 service 内部 collections
+	// 先获取所有的 typeKey 列表
 	service.mu.RLock()
-	defer service.mu.RUnlock()
+	var keys []TypeKey
+	for key := range service.collections {
+		keys = append(keys, key)
+	}
+	service.mu.RUnlock()
 
-	// 遍历所有 TypeKey 对应的数据集合，执行过期清理
-	for typeKey, col := range service.collections {
-		col.cleanCoolData(timestamp, cycle, typeKey)
+	// 遍历所有 TypeKey 执行清理（避免在锁内清理影响并发）
+	for _, typeKey := range keys {
+		service.mu.RLock()
+		col, ok := service.collections[typeKey]
+		service.mu.RUnlock()
+
+		if ok && col != nil {
+			col.cleanCoolData(timestamp, cycle, typeKey)
+		}
 	}
 }
 
