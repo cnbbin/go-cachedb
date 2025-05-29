@@ -74,7 +74,7 @@ fmt.Println("下一月时间戳:", timestate.GetNextMonthTimestamp())
 
     cycledata.RegisterCleanExpired(cycledata.DailyCycle, cycledata.TypeKey(1), func(cycle cycledata.CycleType, typeKey cycledata.TypeKey, data *cycledata.PlayerData) {
         // CleanExpired
-        // 用于发邮件等一些特殊处理或者记录相关信息
+        // 用于发邮件等一些特殊处理或者记录相关信息 如果打log最好结合listcache使用
         fmt.Printf("CleanExpiredr %s data for user %d (Type: %d)\nDetails: %+v\n",
             cycle,
             data.UserID,
