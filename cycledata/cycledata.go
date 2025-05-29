@@ -379,9 +379,9 @@ func (h *cycleHandler) startCleanupRoutine() {
 		}
 		h.mu.RUnlock()
 
-		// 解锁后逐个清理对应周期的过期数据，避免持锁时间过长阻塞其他操作
+		// 解锁后逐个清理对应周期的冷数据，避免持锁时间过长阻塞其他操作
 		for _, cycle := range cycles {
-			h.cleanExpiredData(cycle)
+			h.cleanCoolData(cycle)
 		}
 	}
 }
