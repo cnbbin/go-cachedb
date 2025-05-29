@@ -200,7 +200,7 @@ func (dc *dataCollection) cleanCoolData(now int32, cycle CycleType, typeKey Type
 				log.Printf("Failed to store cold data for user %d: %v", uid, err)
 			}
 		} else {
-			hotData[data.UserID] = data
+			hotData[uid] = data
 		}
 	}
 	dc.data = hotData
