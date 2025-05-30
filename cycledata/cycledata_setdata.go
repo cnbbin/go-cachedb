@@ -19,7 +19,10 @@ func SetData(cycle CycleType, typeKey TypeKey, userID UserID, miscData map[strin
  *   - 新的newMap
  *   - 是否改成时间
  */
-func SetWithAllMiscData(cycle CycleType, typeKey TypeKey, userID UserID, cond func(time.Time, map[string]interface{}) (bool, map[string]interface{}, bool)) bool {
+func SetWithAllMiscData(cycle CycleType, typeKey TypeKey, userID UserID,
+	cond func(time.Time, map[string]interface{}) (bool, map[string]interface{}, bool)) bool {
+
+	// 获取数据指针
 	pd := GetData(cycle, typeKey, userID)
 	if pd == nil {
 		return false
@@ -28,13 +31,17 @@ func SetWithAllMiscData(cycle CycleType, typeKey TypeKey, userID UserID, cond fu
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 
-	curMisData := pd.MiscData
-
-	success, newMiscData, changeTimeBool := cond(pd.UpdateTime, curMisData)
+	// 直接使用原始数据，但通过闭包限制修改
+	success, newMiscData, changeTimeBool := cond(pd.UpdateTime, pd.MiscData)
 	if !success {
 		return false
 	}
-	pd.MiscData = newMiscData
+
+	// 检查新数据是否真的被修改了
+	if newMiscData != nil && &newMiscData != &pd.MiscData {
+		pd.MiscData = newMiscData
+	}
+
 	if changeTimeBool {
 		pd.UpdateTime = time.Now()
 	}
