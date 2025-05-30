@@ -117,6 +117,13 @@ func (m *KeyCacheModule) UpdateKeyValue(key int64, data interface{}) error {
 	return nil
 }
 
+func (m *KeyCacheModule) GetKeyValue(key int64) interface{} {
+	if m.Cache != nil {
+		return m.Cache.GetKeyValue(key) // Call the service's method
+	}
+	return nil
+}
+
 // ListCacheModule 列表缓存模块
 type ListCacheModule struct {
 	ID          string
@@ -170,6 +177,13 @@ func (m *ListCacheModule) Push(data interface{}) error {
 func (m *ListCacheModule) UpdateKeyValue(key int64, data interface{}) error {
 	if m.Cache != nil {
 		return m.Cache.UpdateKeyValue(key, data) // Call the service's method
+	}
+	return nil
+}
+
+func (m *ListCacheModule) GetKeyValue(key int64) interface{} {
+	if m.Cache != nil {
+		return m.Cache.GetKeyValue(key) // Call the service's method
 	}
 	return nil
 }

@@ -51,6 +51,16 @@ func (s *KVCacheService) UpdateKeyValue(key int64, value interface{}) error {
 	return nil
 }
 
+func (s *KVCacheService) GetKeyValue(key int64) (value interface{}) {
+	s.mutex.Lock()
+	value, valueExist := s.cache[key]
+	s.mutex.Unlock()
+	if !valueExist {
+		return nil
+	}
+	return value
+}
+
 func (s *KVCacheService) Push(data interface{}) error {
 	return nil
 }
