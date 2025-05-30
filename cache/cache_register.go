@@ -60,6 +60,17 @@ func RegisterListService(id string, handler ListFlushHandler, interval time.Dura
 	GetServer().RegisterModule(module)
 }
 
+// GetKVCacheValue 通过模块 ID 和 Key 获取缓存值
+func GetKVCacheValue(moduleID string, key int64) interface{} {
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
+
+	if service, ok := registry.kvServices[moduleID]; ok {
+		return service.GetKeyValue(key)
+	}
+	return nil
+}
+
 // KeyCacheModule KV缓存模块
 type KeyCacheModule struct {
 	ID          string
