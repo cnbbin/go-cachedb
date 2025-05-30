@@ -16,6 +16,7 @@ type Module interface {
 	Name() string
 	Push(data interface{}) error
 	UpdateKeyValue(key int64, value interface{}) error
+	GetKeyValue(key int64, value interface{}) interface{}
 }
 
 // Server 结构体，类似 grpc.Server

@@ -84,8 +84,5 @@ func (s *CacheService) flush() {
 }
 
 func (m *CacheService) GetKeyValue(key int64) interface{} {
-	if m.Cache != nil {
-		return m.Cache.GetKeyValue(key) // Call the service's method
-	}
 	return nil
 }
