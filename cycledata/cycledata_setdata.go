@@ -47,3 +47,37 @@ func SetWithAllMiscData(cycle CycleType, typeKey TypeKey, userID UserID,
 	}
 	return true
 }
+
+/*
+ * SetWithAllMiscData 尝试向指定 map[int32]int32 类型的键值设置元素 key:val
+ * 自定义条件：
+ *   - 返回是否设置成功
+ *   - 新的newMap
+ *   - 是否改成时间
+ */
+func SetMiscDataMapCond(cycle CycleType, typeKey TypeKey, userID UserID,
+	cond func(map[string]interface{}) (bool, map[string]interface{})) bool {
+
+	// 获取数据指针
+	pd := GetData(cycle, typeKey, userID)
+	if pd == nil {
+		return false
+	}
+
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	// 直接使用原始数据，但通过闭包限制修改
+	success, newMiscData := cond(pd.MiscData)
+	if !success {
+		return false
+	}
+
+	// 检查新数据是否真的被修改了
+	if newMiscData != nil && &newMiscData != &pd.MiscData {
+		pd.MiscData = newMiscData
+	}
+
+	pd.UpdateTime = time.Now()
+	return true
+}
