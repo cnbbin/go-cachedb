@@ -9,6 +9,13 @@ import (
 	"syscall"
 )
 
+// init 初始化函数
+func init() {
+	// 初始化服务器实例
+	srv = NewCacheServer()
+	log.Println("[Server] Initialized cache server")
+}
+
 // Module 定义模块统一接口
 type Module interface {
 	Start() error
@@ -126,9 +133,10 @@ func (s *Server) Serve() {
 	log.Println("[Server] Exit.")
 }
 
-// init 初始化函数
-func init() {
-	// 初始化服务器实例
-	srv = NewCacheServer()
-	log.Println("[Server] Initialized cache server")
+// StopServer 停止服务器（暴露给外部调用）
+func StopServer() {
+	if srv != nil {
+		log.Println("[Server] External stop triggered")
+		srv.Stop(context.Background())
+	}
 }
