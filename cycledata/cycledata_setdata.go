@@ -81,3 +81,33 @@ func SetMiscDataMapCond(cycle CycleType, typeKey TypeKey, userID UserID,
 	pd.UpdateTime = time.Now()
 	return true
 }
+
+func SetMiscDataMapCondMapString(cycle CycleType, typeKey TypeKey, userID UserID, resultMap map[string]interface{},
+	cond func(map[string]interface{}, map[string]interface{}) (bool, map[string]interface{}, map[string]interface{})) (bool, map[string]interface{}) {
+
+	// 获取数据指针
+	pd := GetData(cycle, typeKey, userID)
+	if pd == nil {
+		return false, resultMap
+	}
+
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
+	// 直接使用原始数据，但通过闭包限制修改 通过resultMap带自己想要的数据
+	success, newMiscData, newResultMap := cond(pd.MiscData, resultMap)
+	if &newResultMap != &resultMap {
+		resultMap = newResultMap
+	}
+	if !success {
+		return false, resultMap
+	}
+
+	// 检查新数据是否真的被修改了
+	if newMiscData != nil && &newMiscData != &pd.MiscData {
+		pd.MiscData = newMiscData
+	}
+
+	pd.UpdateTime = time.Now()
+	return true, resultMap
+}
