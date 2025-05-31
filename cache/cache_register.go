@@ -39,6 +39,7 @@ func RegisterKVService(id string, handler KVFlushHandler, interval time.Duration
 		initializer: initializer, // 保存初始化函数
 	}
 	GetServer().RegisterModule(module)
+	kvService.Start()
 }
 
 // RegisterListService 注册列表缓存服务（初始化延迟到 Start）
@@ -58,6 +59,7 @@ func RegisterListService(id string, handler ListFlushHandler, interval time.Dura
 		initializer: initializer, // 保存初始化函数
 	}
 	GetServer().RegisterModule(module)
+	listService.Start()
 }
 
 // GetKVCacheValue 通过模块 ID 和 Key 获取缓存值
