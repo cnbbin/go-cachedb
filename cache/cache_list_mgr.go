@@ -40,6 +40,7 @@ func (s *CacheService) Stop() {
 	if !s.started {
 		return
 	}
+	s.flush()
 	close(s.stopCh)
 	s.started = false
 }
