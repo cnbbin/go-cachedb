@@ -4,29 +4,23 @@
  */
 package cycledata
 
-import (
-)
-
-
-
-
- /*
-  * GetData 获取指定周期、类型和玩家ID对应的数据
-  * 返回值：
-  *   - interface{} 表示存储的数据（需自行类型断言）
-  *   - bool 是否存在该数据
-  */
+/*
+ * GetData 获取指定周期、类型和玩家ID对应的数据
+ * 返回值：
+ *   - interface{} 表示存储的数据（需自行类型断言）
+ *   - bool 是否存在该数据
+ */
 
 func GetData(cycle CycleType, typeKey TypeKey, userID UserID) *PlayerData {
 	return globalHandler.
-		getService(cycle, DefaultExpireFor(cycle , typeKey)).
+		getService(cycle, DefaultExpireFor(cycle, typeKey)).
 		getCollection(typeKey).
 		get(cycle, typeKey, userID)
 }
 
-func GetDataValue(cycle CycleType, typeKey TypeKey, userID UserID) (map[string]interface{}) {
-	pb :=  globalHandler.
-		getService(cycle, DefaultExpireFor(cycle , typeKey)).
+func GetDataValue(cycle CycleType, typeKey TypeKey, userID UserID) map[string]interface{} {
+	pb := globalHandler.
+		getService(cycle, DefaultExpireFor(cycle, typeKey)).
 		getCollection(typeKey).
 		get(cycle, typeKey, userID)
 	if pb == nil || pb.MiscData == nil {

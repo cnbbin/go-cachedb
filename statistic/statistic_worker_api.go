@@ -1,7 +1,5 @@
 package statistic
 
-
-
 // GetGlobalManager 返回全局单例管理器实例
 func GetGlobalManager() *StatisticManager {
 	return globalMgr
@@ -52,9 +50,6 @@ func (m *StatisticManager) GetCategories(handler StatisticHandler, t StatisticTy
 
 	return cats
 }
-
-
-
 
 // ApplyStaticFunc 尝试调用指定 handler 的 staticFunc（若有 workerFunc 先加工）
 func (m *StatisticManager) ApplyStaticFunc(handler StatisticHandler, t StatisticType, addValue int32) {
@@ -113,8 +108,6 @@ func (m *StatisticManager) ApplyStaticFunc(handler StatisticHandler, t Statistic
 	staticFunc(t, categories, addValue)
 }
 
-
-
 // ApplyStaticFunc 尝试调用指定 handler 的 staticFunc（若有 workerFunc 先加工）
 func (m *StatisticManager) ApplyStaticDoubleFunc(handler StatisticHandler, t StatisticType, addValue int32, otherValue int32) {
 	// Step 1: 尝试从 registries 获取 handlerInfo
@@ -172,15 +165,10 @@ func (m *StatisticManager) ApplyStaticDoubleFunc(handler StatisticHandler, t Sta
 	staticDoubleFunc(t, categories, addValue, otherValue)
 }
 
-
-
-
-
 // ApplyStaticFunc 调用
 func ApplyStaticFunc(handler StatisticHandler, t StatisticType, addValue int32) {
 	GetGlobalManager().ApplyStaticFunc(handler, t, addValue)
 }
-
 
 // ApplyStaticFunc 调用
 func ApplyStaticDoubleFunc(handler StatisticHandler, t StatisticType, addValue int32, otherValue int32) {

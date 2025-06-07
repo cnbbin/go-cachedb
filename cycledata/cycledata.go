@@ -192,9 +192,8 @@ func (dc *dataCollection) cleanCoolData(now int32, cycle CycleType, typeKey Type
 	threshold := nowTime.Add(-4 * time.Hour)
 	hotData := make(map[UserID]*PlayerData)
 	for uid, data := range dc.data {
-		data.mu.RLock()
+		data.mu.Lock()
 		lastUpdate := data.UpdateTime
-		data.mu.RUnlock()
 
 		if lastUpdate.Before(threshold) {
 			if err := handler(cycle, typeKey, data); err != nil {
@@ -203,6 +202,7 @@ func (dc *dataCollection) cleanCoolData(now int32, cycle CycleType, typeKey Type
 		} else {
 			hotData[uid] = data
 		}
+		data.mu.Unlock()
 	}
 	dc.data = hotData
 }
@@ -214,33 +214,33 @@ func (dc *dataCollection) cleanExpired(now int32, cycle CycleType, typeKey TypeK
 	dc.mu.Lock()
 	defer dc.mu.Unlock()
 
-	// First check if there's a custom expiration handler for this cycle and type
 	handler := getCleanExpired(cycle, typeKey)
-
-	// If no handler exists and no data to process, return early
 	if handler == nil || len(dc.data) == 0 {
 		return
 	}
-	isDelete := true
+
+	isAllExpired := true
+
 	for uid, data := range dc.data {
-		// Default expiration logic
-		if data.ExpireTime == 0 {
-			if isDelete {
-				isDelete = false
-			}
+		dataExpireTime := data.ExpireTime
+		if dataExpireTime == 0 {
+			// 永不过期，不能整体清空
+			isAllExpired = false
 			continue
 		}
-		if handler != nil {
-			// Use custom expiration handler
+		if dataExpireTime <= now {
+			// if int64(dataExpireTime) <= int64(now) {
+			data.mu.Lock()
 			handler(cycle, typeKey, data)
+			data.mu.Unlock()
 			delete(dc.data, uid)
-			continue
-		}
-		if data.ExpireTime <= now {
-			delete(dc.data, uid)
+			log.Printf("Deleted expired data for uid %d", uid)
+		} else {
+			isAllExpired = false
 		}
 	}
-	if isDelete {
+
+	if isAllExpired {
 		dc.data = make(map[UserID]*PlayerData)
 	}
 }
@@ -248,22 +248,29 @@ func (dc *dataCollection) cleanExpired(now int32, cycle CycleType, typeKey TypeK
 /*
  * 将集合中所有数据刷入存储器
  */
+// flushAll 将集合中的所有数据刷入存储器，并清空
 func (dc *dataCollection) flushAll(cycle CycleType, typeKey TypeKey) {
-	if stores == nil {
+	store := getStore(cycle, typeKey)
+	if store == nil {
 		return
 	}
 
-	dc.mu.RLock()
-	defer dc.mu.RUnlock()
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
 
-	for _, data := range dc.data {
-		// 创建器
-		if store := getStore(cycle, typeKey); store != nil {
-			if err := store(cycle, typeKey, data); err != nil {
-				log.Printf("Failed to store data for cycle %v, type %v: %v", cycle, typeKey, err)
-			}
+	for uid, data := range dc.data {
+		data.mu.Lock()
+
+		err := store(cycle, typeKey, data)
+
+		if err != nil {
+			log.Printf("Failed to store data for uid %d, cycle %v, type %v, data %v: %v", uid, cycle, typeKey, data.MiscData, err)
 		}
+
+		data.mu.Unlock()
 	}
+
+	dc.data = make(map[UserID]*PlayerData)
 }
 
 /*

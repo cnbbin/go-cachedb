@@ -60,7 +60,6 @@ func RegisterDefaultExpireFunc(cycle CycleType, key TypeKey, fn func() int32) {
 	expireFuncRegistry[cycle][key] = fn
 }
 
-
 /*
  * DefaultExpireFor 获取指定周期和类型键对应的默认过期时间（单位：秒）
  * 如果未注册过期时间函数，返回 0

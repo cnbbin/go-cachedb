@@ -78,6 +78,7 @@ func IncreaseIfCondInt32(cycle CycleType, typeKey TypeKey, userID UserID, key st
 	pd.UpdateTime = time.Now()
 	return true
 }
+
 /*
  * IncreaseIfCondInt64 尝试增加 int64 类型数值
  * 仅当 cond(current) 返回 true 时才执行增加操作

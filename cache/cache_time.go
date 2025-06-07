@@ -8,12 +8,12 @@ import (
 
 // TimeFormatCache 提供高效的时间格式化缓存
 type TimeFormatCache struct {
-	dateCache    sync.Map // map[int64]string (timestamp -> formatted date)
-	hourCache    sync.Map // map[int64]string (timestamp -> formatted hour)
-	cleanTicker  *time.Ticker
-	stopChan     chan struct{}
-	expireAfter  time.Duration
-	lastClean    atomic.Int64
+	dateCache   sync.Map // map[int64]string (timestamp -> formatted date)
+	hourCache   sync.Map // map[int64]string (timestamp -> formatted hour)
+	cleanTicker *time.Ticker
+	stopChan    chan struct{}
+	expireAfter time.Duration
+	lastClean   atomic.Int64
 }
 
 // NewTimeFormatCache 创建新的时间格式化缓存

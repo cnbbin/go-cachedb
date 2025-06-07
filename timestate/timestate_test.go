@@ -1,11 +1,10 @@
 package timestate
 
 import (
+	"context"
 	"testing"
 	"time"
-	"context"
 )
-
 
 // 修改测试函数签名为 test *testing.T
 func TestInitTimezoneTimerAndBasics(test *testing.T) {
@@ -42,24 +41,24 @@ func TestInitTimezoneTimerAndBasics(test *testing.T) {
 }
 
 func TestGetWeekOfMonth(t *testing.T) {
-    testCases := []struct {
-        date     time.Time
-        expected int
-    }{
-        {time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC), 1}, // 5月1日 周四，应该是第1周
-        {time.Date(2025, 5, 4, 0, 0, 0, 0, time.UTC), 1}, // 5月4日 周日，还是第1周（周一起算）
-        {time.Date(2025, 5, 5, 0, 0, 0, 0, time.UTC), 2}, // 5月5日 周一，开始第2周
-        {time.Date(2025, 5, 7, 0, 0, 0, 0, time.UTC), 2}, // 5月7日 周三，第2周
-        {time.Date(2025, 5, 12, 0, 0, 0, 0, time.UTC), 3}, // 5月12日 周一，第2周
-        {time.Date(2025, 5, 13, 0, 0, 0, 0, time.UTC), 3}, // 5月13日 周二，第3周
-    }
+	testCases := []struct {
+		date     time.Time
+		expected int
+	}{
+		{time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC), 1},  // 5月1日 周四，应该是第1周
+		{time.Date(2025, 5, 4, 0, 0, 0, 0, time.UTC), 1},  // 5月4日 周日，还是第1周（周一起算）
+		{time.Date(2025, 5, 5, 0, 0, 0, 0, time.UTC), 2},  // 5月5日 周一，开始第2周
+		{time.Date(2025, 5, 7, 0, 0, 0, 0, time.UTC), 2},  // 5月7日 周三，第2周
+		{time.Date(2025, 5, 12, 0, 0, 0, 0, time.UTC), 3}, // 5月12日 周一，第2周
+		{time.Date(2025, 5, 13, 0, 0, 0, 0, time.UTC), 3}, // 5月13日 周二，第3周
+	}
 
-    for _, tc := range testCases {
-        got := GetWeekOfMonth(tc.date)
-        if got != tc.expected {
-            t.Errorf("GetWeekOfMonth(%v) = %d; want %d", tc.date, got, tc.expected)
-        }
-    }
+	for _, tc := range testCases {
+		got := GetWeekOfMonth(tc.date)
+		if got != tc.expected {
+			t.Errorf("GetWeekOfMonth(%v) = %d; want %d", tc.date, got, tc.expected)
+		}
+	}
 }
 
 func TestDayWeekMonthCallbacks(test *testing.T) {
@@ -165,7 +164,6 @@ func TestReadFunctions(test *testing.T) {
 		test.Error("GetNextMonthTimestamp 返回 0")
 	}
 }
-
 
 func TestMsSecTimer(test *testing.T) {
 	loc, err := time.LoadLocation("Asia/Shanghai")

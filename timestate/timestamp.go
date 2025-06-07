@@ -17,7 +17,7 @@ var (
 func InitTimer(tz *time.Location) {
 	now := getCurrentTime(tz)
 	alignedNow := alignTo100ms(now)
-	
+
 	currentMillisecond.Store(alignedNow.UnixMilli())
 	currentSecond.Store(alignedNow.Unix())
 	lastUpdateTime = alignedNow
@@ -46,7 +46,7 @@ func runPrecise100msUpdater(tz *time.Location) {
 			// 计算补偿时间，确保精确100ms间隔
 			expectedTime := lastUpdateTime.Add(100 * time.Millisecond)
 			adjustedTime := now
-			
+
 			// 如果系统负载导致延迟，使用预期时间而非实际时间
 			if now.Sub(expectedTime) > 5*time.Millisecond {
 				adjustedTime = expectedTime
@@ -54,12 +54,12 @@ func runPrecise100msUpdater(tz *time.Location) {
 
 			alignedTime := alignTo100ms(adjustedTime)
 			ms := alignedTime.UnixMilli()
-			
+
 			currentMillisecond.Store(ms)
 			if alignedTime.Unix() != lastUpdateTime.Unix() {
 				currentSecond.Store(alignedTime.Unix())
 			}
-			
+
 			lastUpdateTime = alignedTime
 		}
 	}

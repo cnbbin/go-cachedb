@@ -2,11 +2,11 @@ package timestate
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
 )
 
 // callbackManager manages a collection of time-based callbacks with thread-safe access
@@ -40,9 +40,9 @@ var callbackMap atomic.Value
 
 var (
 	// Timestamps for the current day's midnight (millisecond and second precision)
-	zeroMsTimestamp    int64
-	zeroSecTimestamp   int64
-	zeroDateValue      atomic.Value // Current date as string in "YYYY-MM-DD" format
+	zeroMsTimestamp  int64
+	zeroSecTimestamp int64
+	zeroDateValue    atomic.Value // Current date as string in "YYYY-MM-DD" format
 
 	// Timestamps for next day/week/month boundaries
 	nextDayTimestamp   int64
@@ -59,10 +59,10 @@ var (
 )
 
 var (
-    // Synchronization for daily timed callbacks
-    dailyTimedMu        sync.RWMutex
-    dailyTimedCallbacks []timedCallback
-    dailyTimedRegisterChan = make(chan struct{}, 1) // Notification channel for callback registration
+	// Synchronization for daily timed callbacks
+	dailyTimedMu           sync.RWMutex
+	dailyTimedCallbacks    []timedCallback
+	dailyTimedRegisterChan = make(chan struct{}, 1) // Notification channel for callback registration
 )
 
 // InitTimezoneTimer initializes the time state tracking system with the specified timezone
@@ -270,16 +270,16 @@ func getNextPeriodKey(t time.Time) string {
 
 // GetWeekOfMonth calculates which week of the month the date falls in (Monday-based)
 func GetWeekOfMonth(t time.Time) int {
-    // Adjust weekday so Monday=0, Sunday=6
-    adjustedWeekday := func(day time.Weekday) int {
-        return (int(day) + 6) % 7
-    }
+	// Adjust weekday so Monday=0, Sunday=6
+	adjustedWeekday := func(day time.Weekday) int {
+		return (int(day) + 6) % 7
+	}
 
-    firstDay := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
-    offsetDays := t.Day() - 1 + adjustedWeekday(firstDay.Weekday())
+	firstDay := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+	offsetDays := t.Day() - 1 + adjustedWeekday(firstDay.Weekday())
 
-    // Calculate week number (1-based)
-    return (offsetDays / 7) + 1
+	// Calculate week number (1-based)
+	return (offsetDays / 7) + 1
 }
 
 // triggerCallbacks safely executes all registered callbacks
@@ -327,86 +327,86 @@ func RegisterMonthCallback(fn func(time.Time)) {
 
 // RegisterDailyTimeCallback adds a new timed daily callback
 func RegisterDailyTimeCallback(hour, minute int, fn TimedCallbackFunc) {
-    if hour < 0 || hour > 23 || minute < 0 || minute > 59 {
-        log.Printf("[timestate] Invalid time parameters hour=%d, minute=%d", hour, minute)
-        return
-    }
-    dailyTimedMu.Lock()
-    dailyTimedCallbacks = append(dailyTimedCallbacks, timedCallback{
-        Hour:     hour,
-        Minute:   minute,
-        Callback: fn,
-    })
-    dailyTimedMu.Unlock()
+	if hour < 0 || hour > 23 || minute < 0 || minute > 59 {
+		log.Printf("[timestate] Invalid time parameters hour=%d, minute=%d", hour, minute)
+		return
+	}
+	dailyTimedMu.Lock()
+	dailyTimedCallbacks = append(dailyTimedCallbacks, timedCallback{
+		Hour:     hour,
+		Minute:   minute,
+		Callback: fn,
+	})
+	dailyTimedMu.Unlock()
 
-    // Notify about registration (non-blocking)
-    select {
-    case dailyTimedRegisterChan <- struct{}{}:
-    default:
-    }
+	// Notify about registration (non-blocking)
+	select {
+	case dailyTimedRegisterChan <- struct{}{}:
+	default:
+	}
 }
 
 // TriggerDailyCallbackWithTimeout manually triggers callbacks for a specific time with timeout control
 func TriggerDailyCallbackWithTimeout(hour, minute int, timeout time.Duration) {
-    dailyTimedMu.RLock()
-    defer dailyTimedMu.RUnlock()
+	dailyTimedMu.RLock()
+	defer dailyTimedMu.RUnlock()
 
-    // Find matching callbacks
-    var matched []TimedCallbackFunc
-    for _, tcb := range dailyTimedCallbacks {
-        if tcb.Hour == hour && tcb.Minute == minute {
-            matched = append(matched, tcb.Callback)
-        }
-    }
+	// Find matching callbacks
+	var matched []TimedCallbackFunc
+	for _, tcb := range dailyTimedCallbacks {
+		if tcb.Hour == hour && tcb.Minute == minute {
+			matched = append(matched, tcb.Callback)
+		}
+	}
 
-    if len(matched) == 0 {
-        log.Printf("[timestate] No matching callbacks found @ %02d:%02d", hour, minute)
-        return
-    }
+	if len(matched) == 0 {
+		log.Printf("[timestate] No matching callbacks found @ %02d:%02d", hour, minute)
+		return
+	}
 
-    // Execute with timeout
-    ctx, cancel := context.WithTimeout(context.Background(), timeout)
-    defer cancel()
+	// Execute with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
-    var wg sync.WaitGroup
-    wg.Add(len(matched))
+	var wg sync.WaitGroup
+	wg.Add(len(matched))
 
-    for _, cb := range matched {
-        go func(fn TimedCallbackFunc) {
-            defer wg.Done()
-            safeCallContext(fn, ctx, time.Now())
-        }(cb)
-    }
+	for _, cb := range matched {
+		go func(fn TimedCallbackFunc) {
+			defer wg.Done()
+			safeCallContext(fn, ctx, time.Now())
+		}(cb)
+	}
 
-    done := make(chan struct{})
-    go func() {
-        wg.Wait()
-        close(done)
-    }()
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
 
-    select {
-    case <-done:
-        log.Printf("[timestate] All callbacks completed @ %02d:%02d", hour, minute)
-    case <-ctx.Done():
-        log.Printf("[timestate] Callback execution timed out @ %02d:%02d", hour, minute)
-    }
+	select {
+	case <-done:
+		log.Printf("[timestate] All callbacks completed @ %02d:%02d", hour, minute)
+	case <-ctx.Done():
+		log.Printf("[timestate] Callback execution timed out @ %02d:%02d", hour, minute)
+	}
 }
 
 // safeCallContext executes a context-aware callback with panic recovery
 func safeCallContext(cb TimedCallbackFunc, ctx context.Context, t time.Time) {
-    defer func() {
-        if r := recover(); r != nil {
-            log.Printf("[timestate] Context callback panic: %v", r)
-        }
-    }()
-    cb(ctx, t)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[timestate] Context callback panic: %v", r)
+		}
+	}()
+	cb(ctx, t)
 }
 
 // ===========================
 // ✅ State Accessors
 // ===========================
-func GetZeroMs() int64   { return atomic.LoadInt64(&zeroMsTimestamp) }
-func GetZeroSec() int64  { return atomic.LoadInt64(&zeroSecTimestamp) }
+func GetZeroMs() int64  { return atomic.LoadInt64(&zeroMsTimestamp) }
+func GetZeroSec() int64 { return atomic.LoadInt64(&zeroSecTimestamp) }
 func GetZeroDate() string {
 	if s, ok := zeroDateValue.Load().(string); ok {
 		return s

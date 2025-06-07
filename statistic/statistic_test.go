@@ -1,6 +1,7 @@
 package statistic
 
 import (
+	"reflect"
 	"sync"
 	"testing"
 )

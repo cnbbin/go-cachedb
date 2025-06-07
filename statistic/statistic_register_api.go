@@ -1,6 +1,5 @@
 package statistic
 
-
 // RegisterCategories 为指定处理器和类型注册静态类别信息，支持追加
 func (m *StatisticManager) RegisterCategories(handler StatisticHandler, t StatisticType, categories []StatisticTypeCategory) {
 	m.mu.Lock()
@@ -18,7 +17,6 @@ func (m *StatisticManager) RegisterCategories(handler StatisticHandler, t Statis
 	// 追加类别
 	hInfo.staticInfo[t] = append(hInfo.staticInfo[t], categories...)
 }
-
 
 // RegisterCategories 为指定处理器和类型注册静态类别信息，重置
 func (m *StatisticManager) ResetRegisterCategories(handler StatisticHandler, t StatisticType, categories []StatisticTypeCategory) {
@@ -75,7 +73,6 @@ func (m *StatisticManager) RegisterStaticFunc(handler StatisticHandler, f func(s
 	hInfo.staticFunc = f
 }
 
-
 // RegisterWorkerFunc 为指定处理器注册worker函数，用于对静态类别数据进行二次加工处理
 func (m *StatisticManager) RegisterWorkerDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32, otherValue int32)) {
 	m.mu.Lock()
@@ -92,7 +89,7 @@ func (m *StatisticManager) RegisterWorkerDoubleFunc(handler StatisticHandler, f 
 }
 
 // RegisterStaticFunc 注册 staticFunc，用于带额外参数的处理逻辑
-func (m *StatisticManager) RegisterStaticDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32 ,otherValue int32)) {
+func (m *StatisticManager) RegisterStaticDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32, otherValue int32)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -106,7 +103,6 @@ func (m *StatisticManager) RegisterStaticDoubleFunc(handler StatisticHandler, f 
 	hInfo.staticDoubleFunc = f
 }
 
-
 // ==== 全局包装函数，方便直接调用全局单例管理器 ====
 
 // RegisterCategories 注册静态类别
@@ -119,7 +115,6 @@ func ResetRegisterCategories(handler StatisticHandler, t StatisticType, categori
 	GetGlobalManager().ResetRegisterCategories(handler, t, categories)
 }
 
-
 // RegisterQueryFunc 注册动态查询函数
 func RegisterQueryFunc(handler StatisticHandler, f func(statType StatisticType) []StatisticTypeCategory) {
 	GetGlobalManager().RegisterQueryFunc(handler, f)
@@ -130,18 +125,15 @@ func RegisterWorkerFunc(handler StatisticHandler, f func(statType StatisticType,
 	GetGlobalManager().RegisterWorkerFunc(handler, f)
 }
 
-
 // RegisterWorkerFunc 注册worker函数
 func RegisterWorkerDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32, otherValue int32)) {
 	GetGlobalManager().RegisterWorkerDoubleFunc(handler, f)
 }
 
-
 // RegisterStaticFunc 注册 staticFunc
 func RegisterStaticDoubleFunc(handler StatisticHandler, f func(statType StatisticType, categories []StatisticTypeCategory, addValue int32, otherValue int32)) {
 	GetGlobalManager().RegisterStaticDoubleFunc(handler, f)
 }
-
 
 // GetCategories 获取类别
 func GetCategories(handler StatisticHandler, t StatisticType) []StatisticTypeCategory {
