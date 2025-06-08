@@ -13,7 +13,6 @@ import (
 func init() {
 	// 初始化服务器实例
 	srv = NewCacheServer()
-	log.Println("[Server] Initialized cache server")
 }
 
 // Module 定义模块统一接口
@@ -40,7 +39,6 @@ var (
 // NewCacheServer 构造函数
 func NewCacheServer() *Server {
 	once.Do(func() {
-		log.Printf("[NewCacheServer] init")
 		srv = &Server{
 			Modules: make(map[string]Module),
 		}

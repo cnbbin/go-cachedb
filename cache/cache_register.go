@@ -84,7 +84,6 @@ type KeyCacheModule struct {
 func (m *KeyCacheModule) init() {
 	if m.initializer != nil {
 		m.initializer()
-		log.Printf("Initialized KV cache module: %s", m.ID)
 	}
 }
 
@@ -148,7 +147,6 @@ type ListCacheModule struct {
 func (m *ListCacheModule) init() {
 	if m.initializer != nil {
 		m.initializer()
-		log.Printf("Initialized List cache module: %s", m.ID)
 	}
 }
 
