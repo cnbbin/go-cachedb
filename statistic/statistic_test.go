@@ -6,136 +6,120 @@ import (
 	"testing"
 )
 
-func TestRegisterAndGetCategories_Static(t *testing.T) {
-	handler := StatisticHandler(1)
-	statType := StatisticType(100)
-	categories := []StatisticTypeCategory{10, 20, 30}
+func TestStaticDoubleFunc(t *testing.T) {
+	handler := StatisticHandler(5)
+	statType := StatisticType(500)
+	initialCats := []StatisticTypeCategory{10, 20}
 
-	RegisterCategories(handler, statType, categories)
+	// 注册静态分类
+	RegisterCategories(handler, statType, initialCats)
 
-	got := GetCategories(handler, statType)
-	if len(got) != len(categories) {
-		t.Fatalf("expected %v categories, got %v", len(categories), len(got))
-	}
-	for i, c := range got {
-		if c != categories[i] {
-			t.Errorf("expected category %v at index %d, got %v", categories[i], i, c)
+	// 注册 workerDoubleFunc，加上两个值并记录被调用次数
+	workerCalled := false
+	RegisterWorkerDoubleFunc(handler, func(t StatisticType, cats []StatisticTypeCategory, v1, v2 int32) {
+		workerCalled = true
+		for i := range cats {
+			cats[i] += StatisticTypeCategory(v1 + v2)
 		}
+	})
+
+	// 注册 staticDoubleFunc，验证是否调用并进一步修改
+	staticCalled := false
+	RegisterStaticDoubleFunc(handler, func(t StatisticType, cats []StatisticTypeCategory, v1, v2 int32) {
+		staticCalled = true
+		for i := range cats {
+			cats[i] += 1 // 额外 +1，便于测试
+		}
+	})
+
+	// 执行 Apply
+	ApplyStaticDoubleFunc(handler, statType, 3, 4)
+
+	// 校验是否都被调用
+	if !workerCalled {
+		t.Error("workerDoubleFunc was not called")
+	}
+	if !staticCalled {
+		t.Error("staticDoubleFunc was not called")
+	}
+
+	// 最终应为：原始 [10,20] → workerDoubleFunc 加 7 → [17,27] → staticDoubleFunc 加 1 → [18,28]
+	got := GetCategories(handler, statType)
+	want := []StatisticTypeCategory{18, 28}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("unexpected result: got %v, want %v", got, want)
 	}
 }
 
-func TestRegisterAndGetCategories_QueryFunc(t *testing.T) {
-	handler := StatisticHandler(2)
-	statType := StatisticType(200)
-	queryCalled := false
+func TestStaticDoubleFunc_Concurrent(t *testing.T) {
+	handler := StatisticHandler(6)
+	statType := StatisticType(600)
+	initialCats := []StatisticTypeCategory{100, 200, 300}
 
-	RegisterQueryFunc(handler, func(t StatisticType) []StatisticTypeCategory {
-		queryCalled = true
-		if t == statType {
-			return []StatisticTypeCategory{40, 50}
+	// 注册静态分类
+	RegisterCategories(handler, statType, initialCats)
+
+	// 使用 Mutex 保护共享写标记
+	var mu sync.Mutex
+	callLog := make([]string, 0)
+
+	RegisterWorkerDoubleFunc(handler, func(t StatisticType, cats []StatisticTypeCategory, v1, v2 int32) {
+		mu.Lock()
+		callLog = append(callLog, "worker")
+		mu.Unlock()
+
+		for i := range cats {
+			cats[i] += StatisticTypeCategory(v1 + v2)
 		}
-		return nil
 	})
 
-	got := GetCategories(handler, statType)
-	if !queryCalled {
-		t.Error("expected query function to be called")
-	}
-	if len(got) != 2 || got[0] != 40 || got[1] != 50 {
-		t.Errorf("unexpected categories returned: %v", got)
-	}
+	RegisterStaticDoubleFunc(handler, func(t StatisticType, cats []StatisticTypeCategory, v1, v2 int32) {
+		mu.Lock()
+		callLog = append(callLog, "static")
+		mu.Unlock()
 
-	// 再次调用，测试缓存是否生效，queryCalled 不应增加
-	queryCalled = false
-	got2 := GetCategories(handler, statType)
-	if queryCalled {
-		t.Error("query function should NOT be called again due to caching")
-	}
-	if len(got2) != 2 || got2[0] != 40 || got2[1] != 50 {
-		t.Errorf("unexpected categories on second call: %v", got2)
-	}
-}
-
-func TestRegisterAndGetCategories_WorkerFunc(t *testing.T) {
-	handler := StatisticHandler(3)
-	statType := StatisticType(300)
-	staticCategories := []StatisticTypeCategory{1, 2, 3}
-
-	RegisterCategories(handler, statType, staticCategories)
-	RegisterWorkerFunc(handler, func(t StatisticType, cats []StatisticTypeCategory) []StatisticTypeCategory {
-		// 反转切片示例
-		n := len(cats)
-		ret := make([]StatisticTypeCategory, n)
-		for i, c := range cats {
-			ret[n-1-i] = c
+		for i := range cats {
+			cats[i] += 1 // 稍作修改验证结果
 		}
-		return ret
 	})
 
-	got := GetCategories(handler, statType)
-	expected := []StatisticTypeCategory{3, 2, 1}
-	if len(got) != len(expected) {
-		t.Fatalf("expected %v categories, got %v", len(expected), len(got))
-	}
-	for i, c := range got {
-		if c != expected[i] {
-			t.Errorf("expected category %v at index %d, got %v", expected[i], i, c)
-		}
-	}
-}
-
-func TestConcurrentAccess(t *testing.T) {
-	handler := StatisticHandler(4)
-	statType := StatisticType(400)
-	staticCategories := []StatisticTypeCategory{5, 6, 7}
-
-	RegisterCategories(handler, statType, staticCategories)
-	RegisterWorkerFunc(handler, func(t StatisticType, cats []StatisticTypeCategory) []StatisticTypeCategory {
-		return cats // 直接返回
-	})
-
-	const goroutines = 50
+	const goroutines = 100
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
 	for i := 0; i < goroutines; i++ {
 		go func() {
 			defer wg.Done()
-			got := GetCategories(handler, statType)
-			if len(got) != len(staticCategories) {
-				t.Errorf("expected %v categories, got %v", len(staticCategories), len(got))
-			}
+			ApplyStaticDoubleFunc(handler, statType, 1, 2) // 每次 +3 再 +1
 		}()
 	}
-
 	wg.Wait()
-}
 
-const (
-	TestHandler StatisticHandler = 1
-	TestType    StatisticType    = 100
-)
+	// 只验证：不会 panic，且 GetCategories 最终值符合 100 goroutines * 4 增量
+	expected := []StatisticTypeCategory{
+		initialCats[0] + 4*goroutines,
+		initialCats[1] + 4*goroutines,
+		initialCats[2] + 4*goroutines,
+	}
+	got := GetCategories(handler, statType)
 
-func TestStaticFunc(t *testing.T) {
-	// 初始化数据
-	initialCats := []StatisticTypeCategory{1, 2, 3}
-	RegisterCategories(TestHandler, TestType, initialCats)
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("concurrent ApplyStaticDoubleFunc failed: got %v, want %v", got, expected)
+	}
 
-	// 添加 staticFunc：将 addValue 加入每个类别中
-	RegisterStaticFunc(TestHandler, func(statType StatisticType, categories []StatisticTypeCategory, addValue int32) {
-		for i := range categories {
-			categories[i] += StatisticTypeCategory(addValue)
+	// 验证调用日志数量
+	mu.Lock()
+	defer mu.Unlock()
+	workerCount := 0
+	staticCount := 0
+	for _, entry := range callLog {
+		if entry == "worker" {
+			workerCount++
+		} else if entry == "static" {
+			staticCount++
 		}
-	})
-
-	// 执行 staticFunc，增加值 10
-	ApplyStaticFunc(TestHandler, TestType, 10)
-
-	// 重新获取静态数据
-	got := GetCategories(TestHandler, TestType)
-
-	want := []StatisticTypeCategory{11, 12, 13}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("ApplyStaticFunc failed: got %v, want %v", got, want)
+	}
+	if workerCount != goroutines || staticCount != goroutines {
+		t.Errorf("expected %d calls to both funcs, got worker=%d static=%d", goroutines, workerCount, staticCount)
 	}
 }
